@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Download, Image, Film, Home } from "lucide-react";
+import { Download, Share2, ChevronLeft, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -14,7 +15,8 @@ export default function DownloadPage() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [allMedia, setAllMedia] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [resolvedSessionId, setResolvedSessionId] = useState(null);
 
   useEffect(() => {
@@ -32,28 +34,58 @@ export default function DownloadPage() {
           const resolveRes = await axios.get(`${API}/resolve/${idToResolve}`);
           actualSessionId = resolveRes.data.session_id;
         } catch (e) {
-          // If resolve fails, try using it as a regular session ID
           actualSessionId = idToResolve;
         }
       }
       
       setResolvedSessionId(actualSessionId);
       
-      // Try share endpoint first (works with both session ID and short ID)
+      // Fetch session data
+      let sessionData;
       try {
         const response = await axios.get(`${API}/share/${actualSessionId}`);
-        setSession(response.data);
-        if (response.data.photobooth_image_url) {
-          setSelectedPhoto({ type: 'strip', url: response.data.photobooth_image_url });
-        }
+        sessionData = response.data;
       } catch (e) {
-        // Fall back to regular session endpoint
         const response = await axios.get(`${API}/sessions/${actualSessionId}`);
-        setSession(response.data);
-        if (response.data.final_image_url) {
-          setSelectedPhoto({ type: 'strip', url: response.data.final_image_url });
-        }
+        sessionData = response.data;
       }
+      
+      setSession(sessionData);
+      
+      // Build media array
+      const mediaItems = [];
+      
+      // Add individual photos first
+      const photos = sessionData.photos || [];
+      photos.forEach((photo, idx) => {
+        mediaItems.push({ 
+          type: 'photo', 
+          src: `${API.replace('/api', '')}${photo}`, 
+          label: `Photo ${idx + 1}` 
+        });
+      });
+      
+      // Add photo strip
+      const stripUrl = sessionData.photobooth_image_url || sessionData.final_image_url;
+      if (stripUrl) {
+        mediaItems.push({ 
+          type: 'strip', 
+          src: `${API.replace('/api', '')}${stripUrl}`, 
+          label: 'Photo Strip' 
+        });
+      }
+      
+      // Add video if available
+      if (sessionData.video_url) {
+        mediaItems.push({ 
+          type: 'video', 
+          src: `${API.replace('/api', '')}${sessionData.video_url}`, 
+          label: 'Video' 
+        });
+      }
+      
+      setAllMedia(mediaItems);
+      
     } catch (error) {
       console.error("Error fetching session:", error);
       setError("Photo session not found or has expired");
@@ -62,34 +94,59 @@ export default function DownloadPage() {
     }
   };
 
-  const handleDownloadImage = () => {
-    const id = resolvedSessionId || sessionId || shortId;
-    window.open(`${API.replace('/api', '')}/api/download/${id}/image`, '_blank');
+  const handlePrev = () => {
+    setCurrentIndex(prev => (prev > 0 ? prev - 1 : allMedia.length - 1));
   };
 
-  const handleDownloadVideo = () => {
-    const id = resolvedSessionId || sessionId || shortId;
-    window.open(`${API.replace('/api', '')}/api/download/${id}/gif`, '_blank');
+  const handleNext = () => {
+    setCurrentIndex(prev => (prev < allMedia.length - 1 ? prev + 1 : 0));
   };
 
-  const handleDownloadPhoto = (index) => {
-    if (session?.photos?.[index]) {
+  const handleDownload = () => {
+    const currentMedia = allMedia[currentIndex];
+    if (!currentMedia || !resolvedSessionId) return;
+    
+    if (currentMedia.type === 'video') {
+      window.open(`${API.replace('/api', '')}/api/download/${resolvedSessionId}/video`, '_blank');
+    } else if (currentMedia.type === 'strip') {
+      window.open(`${API.replace('/api', '')}/api/download/${resolvedSessionId}/image`, '_blank');
+    } else {
+      // Download individual photo
       const link = document.createElement('a');
-      link.href = `${API.replace('/api', '')}${session.photos[index]}`;
-      link.download = `photo_${index + 1}.jpg`;
+      link.href = currentMedia.src;
+      link.download = `photo-${currentIndex + 1}.jpg`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ 
+          title: 'Power of Ten Photos', 
+          text: 'Check out my photos!',
+          url: window.location.href 
+        });
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          navigator.clipboard.writeText(window.location.href);
+          toast.success("Link copied!");
+        }
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copied!");
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center paper-bg">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-6" />
-          <p 
-            className="text-2xl text-gray-600"
-            style={{ fontFamily: 'var(--font-handwritten)' }}
-          >
+          <div className="w-12 h-12 border-4 border-pink-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600" style={{ fontFamily: 'var(--font-handwritten)' }}>
             Loading your photos...
           </p>
         </div>
@@ -99,27 +156,14 @@ export default function DownloadPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center paper-bg">
-        <div className="text-center max-w-md mx-auto px-6">
-          <div className="text-8xl mb-6">😢</div>
-          <h2 
-            className="text-4xl font-bold text-gray-800 mb-4"
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            Oops!
-          </h2>
-          <p 
-            className="text-xl text-gray-600 mb-8"
-            style={{ fontFamily: 'var(--font-handwritten)' }}
-          >
-            {error}
-          </p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="text-center">
+          <div className="text-6xl mb-4">😢</div>
+          <p className="text-xl text-gray-600 mb-6">{error}</p>
           <Button
             onClick={() => window.location.href = '/'}
-            className="btn-sketch bg-pink-400 hover:bg-pink-500 text-white text-xl px-8 py-4"
-            data-testid="create-new-btn"
+            className="bg-pink-400 hover:bg-pink-500 text-white"
           >
-            <Home className="w-6 h-6 mr-2" />
             Go Home
           </Button>
         </div>
@@ -127,171 +171,141 @@ export default function DownloadPage() {
     );
   }
 
+  const currentMedia = allMedia[currentIndex];
+
   return (
-    <div className="min-h-screen paper-bg">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Header */}
-      <header className="py-4 sm:py-6 text-center">
+      <header className="flex items-center justify-between px-4 py-3 bg-white border-b">
         <h1 
-          className="text-4xl sm:text-5xl font-bold text-gray-800"
+          className="text-xl font-bold text-gray-800" 
           style={{ fontFamily: 'var(--font-heading)' }}
           data-testid="download-page-title"
         >
           Power of Ten
         </h1>
-        <div 
-          className="h-1.5 bg-pink-400 mx-auto mt-2"
-          style={{ width: '150px', borderRadius: '255px 15px 225px 15px/15px 225px 15px 255px' }}
-        />
-        <p 
-          className="text-lg sm:text-xl text-gray-500 mt-2"
-          style={{ fontFamily: 'var(--font-handwritten)' }}
-        >
-          Your photos are ready! ✨
-        </p>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleDownload} 
+            className="p-2 hover:bg-gray-100"
+            data-testid="header-download-btn"
+          >
+            <Download className="w-6 h-6 text-gray-700" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleShare} 
+            className="p-2 hover:bg-gray-100"
+            data-testid="header-share-btn"
+          >
+            <Share2 className="w-6 h-6 text-gray-700" />
+          </Button>
+        </div>
       </header>
 
-      {/* Main Content */}
-      <main className="px-4 sm:px-6 pb-8">
-        <div className="max-w-md mx-auto">
-          
-          {/* Large Preview */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="sketch-border bg-white p-3 sm:p-4 mb-4"
+      {/* Main Preview Area */}
+      <main className="flex-1 flex items-center justify-center relative bg-white">
+        {/* Left Arrow */}
+        {allMedia.length > 1 && (
+          <button 
+            onClick={handlePrev} 
+            className="absolute left-2 z-10 p-2 text-gray-400 hover:text-gray-700 transition-colors"
+            data-testid="prev-btn"
           >
-            <div 
-              className="w-full rounded overflow-hidden bg-gray-100"
-              style={{ aspectRatio: selectedPhoto?.type === 'strip' ? '2/6' : '16/9' }}
+            <ChevronLeft className="w-10 h-10" strokeWidth={2} />
+          </button>
+        )}
+
+        {/* Image/Video Preview */}
+        <AnimatePresence mode="wait">
+          {currentMedia && (
+            <motion.div
+              key={currentIndex}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="w-full h-full flex items-center justify-center p-4"
+              style={{ maxHeight: 'calc(100vh - 200px)' }}
             >
-              {selectedPhoto ? (
-                <img 
-                  src={selectedPhoto.type === 'strip' 
-                    ? `${API.replace('/api', '')}${selectedPhoto.url}`
-                    : `${API.replace('/api', '')}${selectedPhoto.url}`
-                  } 
-                  alt="Preview" 
-                  className="w-full h-full object-contain"
+              {currentMedia.type === 'video' ? (
+                <video
+                  src={currentMedia.src}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  controls
+                  className="max-w-full max-h-full object-contain"
+                  style={{ maxHeight: 'calc(100vh - 220px)' }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Image className="w-12 h-12 text-gray-300" />
-                </div>
+                <img
+                  src={currentMedia.src}
+                  alt={currentMedia.label}
+                  className="max-w-full max-h-full object-contain"
+                  style={{ maxHeight: 'calc(100vh - 220px)' }}
+                />
               )}
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          {/* Photo Thumbnails */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-6"
+        {/* Right Arrow */}
+        {allMedia.length > 1 && (
+          <button 
+            onClick={handleNext} 
+            className="absolute right-2 z-10 p-2 text-gray-400 hover:text-gray-700 transition-colors"
+            data-testid="next-btn"
           >
-            <h3 
-              className="text-xl font-bold text-gray-700 mb-3 text-center"
-              style={{ fontFamily: 'var(--font-heading)' }}
-            >
-              📸 Your Photos
-            </h3>
-            <div className="flex gap-2 overflow-x-auto pb-2 justify-center">
-              {/* Photo Strip Thumbnail */}
-              {(session?.photobooth_image_url || session?.final_image_url) && (
-                <div
-                  onClick={() => setSelectedPhoto({ type: 'strip', url: session.photobooth_image_url || session.final_image_url })}
-                  className={`flex-shrink-0 cursor-pointer rounded-lg overflow-hidden border-3 transition-all ${
-                    selectedPhoto?.type === 'strip' 
-                      ? 'border-pink-400 ring-2 ring-pink-300' 
-                      : 'border-gray-300 hover:border-pink-300'
-                  }`}
-                  style={{ width: '50px', height: '100px' }}
-                >
-                  <img 
-                    src={`${API.replace('/api', '')}${session.photobooth_image_url || session.final_image_url}`}
-                    alt="Photo Strip"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              
-              {/* Individual Photos */}
-              {session?.photos?.map((photo, index) => (
-                <div
-                  key={index}
-                  onClick={() => setSelectedPhoto({ type: 'photo', url: photo, index })}
-                  className={`flex-shrink-0 cursor-pointer rounded-lg overflow-hidden border-3 transition-all ${
-                    selectedPhoto?.type === 'photo' && selectedPhoto?.index === index
-                      ? 'border-pink-400 ring-2 ring-pink-300' 
-                      : 'border-gray-300 hover:border-pink-300'
-                  }`}
-                  style={{ width: '80px', height: '45px' }}
-                >
-                  <img 
-                    src={`${API.replace('/api', '')}${photo}`}
-                    alt={`Photo ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          </motion.div>
+            <ChevronRight className="w-10 h-10" strokeWidth={2} />
+          </button>
+        )}
 
-          {/* Download Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-3"
-          >
-            {/* Download Photo Strip */}
-            <Button
-              onClick={handleDownloadImage}
-              className="w-full btn-sketch py-5 text-lg bg-pink-400 hover:bg-pink-500 text-white"
-              data-testid="public-download-image-btn"
-            >
-              <Image className="w-5 h-5 mr-2" />
-              Download Photo Strip
-            </Button>
-
-            {/* Download Video */}
-            <Button
-              onClick={handleDownloadVideo}
-              className="w-full btn-sketch py-5 text-lg bg-white hover:bg-pink-50 text-gray-700 border-2 border-gray-800"
-              data-testid="public-download-gif-btn"
-            >
-              <Film className="w-5 h-5 mr-2" />
-              Download Video
-            </Button>
-
-            {/* Download Current Photo (if individual photo selected) */}
-            {selectedPhoto?.type === 'photo' && (
-              <Button
-                onClick={() => handleDownloadPhoto(selectedPhoto.index)}
-                variant="outline"
-                className="w-full btn-sketch py-4 text-base"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download This Photo
-              </Button>
-            )}
-          </motion.div>
-
-          {/* Footer */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="mt-8 text-center"
-          >
-            <p 
-              className="text-sm text-pink-400 font-bold"
-              style={{ fontFamily: 'var(--font-heading)' }}
-            >
-              ✨ Power of Ten ✨
-            </p>
-          </motion.div>
-        </div>
+        {/* Counter Badge */}
+        {allMedia.length > 0 && (
+          <div className="absolute top-4 right-4 px-3 py-1.5 bg-black/60 rounded-full text-white text-sm font-medium">
+            {currentIndex + 1}/{allMedia.length}
+          </div>
+        )}
       </main>
+
+      {/* Thumbnail Gallery */}
+      <div className="bg-gray-100 py-4 px-2 border-t">
+        <div className="flex items-center justify-start gap-3 overflow-x-auto pb-2 px-2">
+          {allMedia.map((media, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentIndex(index)}
+              className={`flex-shrink-0 rounded-lg overflow-hidden border-3 transition-all ${
+                index === currentIndex 
+                  ? 'border-gray-800 ring-2 ring-gray-600' 
+                  : 'border-transparent opacity-70 hover:opacity-100'
+              }`}
+              style={{ 
+                width: media.type === 'strip' ? '60px' : '100px', 
+                height: media.type === 'strip' ? '120px' : '75px' 
+              }}
+              data-testid={`thumbnail-${index}`}
+            >
+              {media.type === 'video' ? (
+                <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                  <span className="text-2xl">🎬</span>
+                </div>
+              ) : (
+                <img 
+                  src={media.src} 
+                  alt={media.label} 
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
