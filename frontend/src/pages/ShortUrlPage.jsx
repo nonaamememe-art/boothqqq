@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Download, ImageIcon, Sparkles } from "lucide-react";
+import { Download } from "lucide-react";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -13,7 +13,9 @@ export default function ShortUrlPage() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [finalImageUrl, setFinalImageUrl] = useState(null);
+  const [videoUrl, setVideoUrl] = useState(null);
 
   useEffect(() => {
     fetchSession();
@@ -25,13 +27,17 @@ export default function ShortUrlPage() {
       const resolveRes = await axios.get(`${API}/resolve/${shortId}`);
       const sessionId = resolveRes.data.session_id;
       
-      // Get session details
-      const response = await axios.get(`${API}/share/${sessionId}`);
-      setSession({ ...response.data, fullId: sessionId });
+      // Get full session details
+      const sessionRes = await axios.get(`${API}/sessions/${sessionId}`);
+      setSession({ ...sessionRes.data, fullId: sessionId });
+      setPhotos(sessionRes.data.photos || []);
       
-      // Load image preview
-      if (response.data.has_image) {
-        setImagePreview(`${API.replace('/api', '')}/api/download/${sessionId}/image`);
+      // Set download URLs
+      if (sessionRes.data.final_image_url) {
+        setFinalImageUrl(`${API.replace('/api', '')}${sessionRes.data.final_image_url}`);
+      }
+      if (sessionRes.data.video_url) {
+        setVideoUrl(`${API.replace('/api', '')}${sessionRes.data.video_url}`);
       }
     } catch (error) {
       console.error("Error fetching session:", error);
@@ -41,15 +47,15 @@ export default function ShortUrlPage() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownloadImage = () => {
     if (session?.fullId) {
       window.open(`${API.replace('/api', '')}/api/download/${session.fullId}/image`, '_blank');
     }
   };
 
-  const handleDownloadGif = () => {
+  const handleDownloadVideo = () => {
     if (session?.fullId) {
-      window.open(`${API.replace('/api', '')}/api/download/${session.fullId}/gif`, '_blank');
+      window.open(`${API.replace('/api', '')}/api/download/${session.fullId}/video`, '_blank');
     }
   };
 
@@ -57,8 +63,8 @@ export default function ShortUrlPage() {
     return (
       <div className="min-h-screen flex items-center justify-center paper-bg">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-lg" style={{ fontFamily: 'var(--font-handwritten)' }}>Loading your photo...</p>
+          <div className="w-20 h-20 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-6" />
+          <p className="text-2xl" style={{ fontFamily: 'var(--font-handwritten)' }}>Loading your photos...</p>
         </div>
       </div>
     );
@@ -68,18 +74,9 @@ export default function ShortUrlPage() {
     return (
       <div className="min-h-screen flex items-center justify-center paper-bg">
         <div className="text-center max-w-md mx-auto px-6">
-          <div className="w-24 h-24 sketch-border bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6" style={{ transform: 'rotate(-3deg)' }}>
-            <span className="text-4xl">😢</span>
-          </div>
-          <h2 className="text-3xl font-bold mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Oops!</h2>
-          <p className="text-gray-600 mb-6" style={{ fontFamily: 'var(--font-handwritten)' }}>{error}</p>
-          <Button
-            onClick={() => window.location.href = '/'}
-            className="btn-sketch bg-pink-400 hover:bg-pink-500 text-white px-8 py-3"
-            data-testid="create-new-btn"
-          >
-            Create Your Own!
-          </Button>
+          <div className="text-8xl mb-6">😢</div>
+          <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Oops!</h2>
+          <p className="text-xl text-gray-600" style={{ fontFamily: 'var(--font-handwritten)' }}>{error}</p>
         </div>
       </div>
     );
@@ -90,11 +87,10 @@ export default function ShortUrlPage() {
       {/* Header */}
       <header className="text-center mb-8">
         <motion.h1 
-          initial={{ opacity: 0, y: -20, rotate: -3 }}
-          animate={{ opacity: 1, y: 0, rotate: -2 }}
-          className="text-5xl font-bold text-gray-800 inline-block"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-5xl font-bold text-gray-800"
           style={{ fontFamily: 'var(--font-heading)' }}
-          data-testid="download-page-title"
         >
           Power of Ten
         </motion.h1>
@@ -106,96 +102,124 @@ export default function ShortUrlPage() {
         />
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-md mx-auto">
-        {/* Photo Preview */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, rotate: -2 }}
-          animate={{ opacity: 1, scale: 1, rotate: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mb-8"
-        >
-          <div className="photo-frame-sketch mx-auto" style={{ maxWidth: '320px' }}>
-            {imagePreview ? (
-              <img
-                src={imagePreview}
-                alt="Your photo strip"
-                className="w-full rounded"
-                data-testid="photo-preview"
-              />
-            ) : (
-              <div className="aspect-square bg-gray-100 rounded flex items-center justify-center">
-                <ImageIcon className="w-16 h-16 text-gray-300" />
-              </div>
-            )}
-          </div>
-          
-          {/* Decorative tape */}
-          <div className="flex justify-center -mt-2">
-            <div 
-              className="w-16 h-6 bg-yellow-200/80 border border-yellow-300/50"
-              style={{ transform: 'rotate(-5deg)' }}
-            />
-          </div>
-        </motion.div>
-
-        {/* Download Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="text-center space-y-4"
-        >
-          <Button
-            onClick={handleDownload}
-            className="btn-sketch bg-pink-500 hover:bg-pink-600 text-white px-6 py-2"
-            data-testid="download-btn"
+      <main className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* 4 Individual Photos */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="lg:col-span-1"
           >
-            <Download className="w-4 h-4 mr-2" />
-            Download Photo
-          </Button>
+            <h2 
+              className="text-2xl font-bold text-gray-800 mb-4 text-center"
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
+              📸 Your Photos
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {photos.slice(0, 4).map((photo, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="aspect-square rounded-lg overflow-hidden sketch-border bg-white p-2"
+                  style={{ transform: `rotate(${index % 2 === 0 ? -1 : 1}deg)` }}
+                >
+                  <img
+                    src={photo}
+                    alt={`Photo ${index + 1}`}
+                    className="w-full h-full object-cover rounded"
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
 
-          {session?.has_gif && (
-            <div>
+          {/* Photo Booth (Final Image) */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="lg:col-span-1"
+          >
+            <h2 
+              className="text-2xl font-bold text-gray-800 mb-4 text-center"
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
+              🎨 Photo Booth
+            </h2>
+            <div className="sketch-border bg-white p-3 mx-auto" style={{ maxWidth: '250px' }}>
+              {finalImageUrl ? (
+                <img
+                  src={finalImageUrl}
+                  alt="Photo Booth Strip"
+                  className="w-full rounded"
+                  data-testid="final-image"
+                />
+              ) : (
+                <div className="aspect-[1/3] bg-gray-100 rounded flex items-center justify-center">
+                  <span className="text-gray-400">Loading...</span>
+                </div>
+              )}
+            </div>
+            <div className="mt-4 text-center">
               <Button
-                variant="outline"
-                onClick={handleDownloadGif}
-                className="btn-sketch bg-white hover:bg-gray-50 px-6 py-2"
-                data-testid="download-gif-btn"
+                onClick={handleDownloadImage}
+                className="btn-sketch bg-pink-500 hover:bg-pink-600 text-white"
+                data-testid="download-image-btn"
               >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Download GIF
+                <Download className="w-5 h-5 mr-2" />
+                Download Photo
               </Button>
             </div>
-          )}
-        </motion.div>
+          </motion.div>
 
-        {/* Create Your Own */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="mt-12 text-center"
-        >
-          <p className="text-gray-500 mb-3" style={{ fontFamily: 'var(--font-handwritten)' }}>
-            Want to create your own?
-          </p>
-          <Button
-            variant="ghost"
-            onClick={() => window.location.href = '/'}
-            className="text-pink-500 hover:text-pink-600 hover:bg-pink-50"
-            style={{ fontFamily: 'var(--font-handwritten)' }}
-            data-testid="create-own-btn"
+          {/* Video/GIF */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="lg:col-span-1"
           >
-            Start Here →
-          </Button>
-        </motion.div>
-
-        {/* Footer */}
-        <div className="mt-16 text-center">
-          <p className="text-sm text-gray-400" style={{ fontFamily: 'var(--font-handwritten)' }}>
-            ✨ Made with Power of Ten ✨
-          </p>
+            <h2 
+              className="text-2xl font-bold text-gray-800 mb-4 text-center"
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
+              🎬 Video
+            </h2>
+            <div className="sketch-border bg-white p-3 mx-auto" style={{ maxWidth: '300px' }}>
+              {session?.fullId ? (
+                <video
+                  src={`${API.replace('/api', '')}/api/download/${session.fullId}/video`}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full rounded"
+                  style={{ aspectRatio: '16/9' }}
+                  data-testid="video-preview"
+                >
+                  Your browser does not support video.
+                </video>
+              ) : (
+                <div className="aspect-video bg-gray-100 rounded flex items-center justify-center">
+                  <span className="text-gray-400">Loading...</span>
+                </div>
+              )}
+            </div>
+            <div className="mt-4 text-center">
+              <Button
+                onClick={handleDownloadVideo}
+                variant="outline"
+                className="btn-sketch border-purple-400 text-purple-600 hover:bg-purple-50"
+                data-testid="download-video-btn"
+              >
+                <Download className="w-5 h-5 mr-2" />
+                Download Video
+              </Button>
+            </div>
+          </motion.div>
         </div>
       </main>
     </div>

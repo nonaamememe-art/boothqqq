@@ -2,9 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
-import { Check, Trash2, RotateCw, ZoomIn, ZoomOut, ArrowRight, ArrowLeft } from "lucide-react";
+import { Printer, Trash2, RotateCw, ZoomIn, ZoomOut } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import html2canvas from "html2canvas";
@@ -58,9 +57,9 @@ export default function DecorationPage() {
     const newSticker = {
       id: `sticker-${Date.now()}`,
       ...stickerData,
-      x: 120,
-      y: 120,
-      scale: 1,
+      x: 150,
+      y: 150,
+      scale: 1.5,
       rotation: 0
     };
     setStickers(prev => [...prev, newSticker]);
@@ -116,7 +115,7 @@ export default function DecorationPage() {
     }
   }, [dragging, handleMouseMove]);
 
-  const handleFinalize = async () => {
+  const handlePrint = async () => {
     if (!canvasRef.current) return;
     
     setLoading(true);
@@ -128,7 +127,9 @@ export default function DecorationPage() {
 
       const canvas = await html2canvas(canvasRef.current, {
         backgroundColor: template?.background_color || "#fef9f3",
-        scale: 2
+        scale: 2,
+        width: 640,
+        height: 1920
       });
       const imageData = canvas.toDataURL("image/png");
 
@@ -150,276 +151,215 @@ export default function DecorationPage() {
   const selectedStickerData = stickers.find(s => s.id === selectedSticker);
 
   return (
-    <div className="min-h-screen paper-bg">
-      {/* Header */}
-      <header className="py-4 px-6 flex items-center justify-between border-b-2 border-dashed border-gray-300">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(`/capture/${sessionId}`)}
-            className="hover:bg-pink-50"
-            data-testid="back-to-capture-btn"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <h1 
-            className="text-3xl font-bold text-gray-800"
-            style={{ fontFamily: 'var(--font-heading)' }}
-            data-testid="decorate-title"
-          >
-            🎨 Add Some Fun!
-          </h1>
-        </div>
-        <Button
-          onClick={handleFinalize}
-          disabled={loading}
-          className="btn-sketch bg-green-500 hover:bg-green-600 text-white"
-          data-testid="finalize-btn"
+    <div className="min-h-screen bg-gray-900 flex">
+      {/* Sticker Panel - Left Side */}
+      <div className="w-96 p-6 bg-gray-800 overflow-y-auto">
+        <h2 
+          className="text-3xl font-bold text-white mb-6 text-center"
+          style={{ fontFamily: 'var(--font-heading)' }}
         >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Creating...
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <Check className="w-4 h-4" />
-              Done! Get QR
-            </span>
-          )}
-        </Button>
-      </header>
-
-      {/* Main Content */}
-      <main className="p-6">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sticker Controls */}
-          <div className="lg:col-span-1 order-2 lg:order-1">
-            <div className="sketch-border bg-white p-4" style={{ transform: 'rotate(-1deg)' }}>
-              <Tabs defaultValue="stickers">
-                <TabsList className="w-full bg-gray-100">
-                  <TabsTrigger value="stickers" className="flex-1" data-testid="stickers-tab">
-                    Stickers ✨
-                  </TabsTrigger>
-                  <TabsTrigger value="edit" className="flex-1" data-testid="edit-tab">
-                    Edit 🎛️
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="stickers" className="mt-4">
-                  <div className="grid grid-cols-3 gap-2">
-                    {availableStickers.map((sticker) => (
-                      <motion.button
-                        key={sticker.id}
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        whileTap={{ scale: 0.9 }}
-                        className="p-2 rounded-lg bg-gray-50 hover:bg-pink-50 border-2 border-dashed border-gray-200 hover:border-pink-300 transition-colors"
-                        onClick={() => addSticker(sticker)}
-                        data-testid={`add-sticker-${sticker.id}`}
-                      >
-                        <img
-                          src={sticker.url}
-                          alt={sticker.name}
-                          className="w-full h-12 object-contain"
-                        />
-                      </motion.button>
-                    ))}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="edit" className="mt-4">
-                  {selectedStickerData ? (
-                    <div className="space-y-6">
-                      <div>
-                        <label 
-                          className="text-sm font-medium text-gray-700 mb-2 block"
-                          style={{ fontFamily: 'var(--font-handwritten)' }}
-                        >
-                          Size
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <ZoomOut className="w-4 h-4 text-gray-400" />
-                          <Slider
-                            value={[selectedStickerData.scale * 100]}
-                            onValueChange={([val]) => updateSticker(selectedSticker, { scale: val / 100 })}
-                            min={20}
-                            max={200}
-                            step={5}
-                            className="flex-1"
-                            data-testid="sticker-size-slider"
-                          />
-                          <ZoomIn className="w-4 h-4 text-gray-400" />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label 
-                          className="text-sm font-medium text-gray-700 mb-2 block"
-                          style={{ fontFamily: 'var(--font-handwritten)' }}
-                        >
-                          Rotation
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <RotateCw className="w-4 h-4 text-gray-400" />
-                          <Slider
-                            value={[selectedStickerData.rotation]}
-                            onValueChange={([val]) => updateSticker(selectedSticker, { rotation: val })}
-                            min={-180}
-                            max={180}
-                            step={5}
-                            className="flex-1"
-                            data-testid="sticker-rotation-slider"
-                          />
-                        </div>
-                      </div>
-
-                      <Button
-                        variant="destructive"
-                        onClick={() => removeSticker(selectedSticker)}
-                        className="w-full btn-sketch"
-                        data-testid="remove-sticker-btn"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Remove
-                      </Button>
-                    </div>
-                  ) : (
-                    <p 
-                      className="text-center text-gray-500 py-8"
-                      style={{ fontFamily: 'var(--font-handwritten)' }}
-                    >
-                      Tap a sticker to edit it! ☝️
-                    </p>
-                  )}
-                </TabsContent>
-              </Tabs>
-
-              {stickers.length > 0 && (
-                <div className="mt-4 pt-4 border-t-2 border-dashed border-gray-200">
-                  <h4 
-                    className="text-sm font-medium text-gray-700 mb-2"
-                    style={{ fontFamily: 'var(--font-handwritten)' }}
-                  >
-                    Active Stickers ({stickers.length})
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {stickers.map((sticker) => (
-                      <button
-                        key={sticker.id}
-                        className={`w-10 h-10 rounded-lg p-1 transition-all border-2 ${
-                          selectedSticker === sticker.id
-                            ? "border-pink-500 bg-pink-50"
-                            : "border-gray-200 bg-gray-50 hover:border-pink-300"
-                        }`}
-                        onClick={() => setSelectedSticker(sticker.id)}
-                      >
-                        <img
-                          src={sticker.url}
-                          alt={sticker.name}
-                          className="w-full h-full object-contain"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Photo Strip Canvas */}
-          <div className="lg:col-span-3 order-1 lg:order-2 flex justify-center">
-            <div
-              ref={canvasRef}
-              className="photo-frame-sketch relative p-4"
-              style={{
-                width: "400px",
-                backgroundColor: template?.background_color || "#fef9f3"
-              }}
-              onClick={(e) => {
-                if (e.target === canvasRef.current) {
-                  setSelectedSticker(null);
-                }
-              }}
-              data-testid="decoration-canvas"
+          🎨 Stickers
+        </h2>
+        
+        {/* Sticker Grid - Bigger stickers */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          {availableStickers.map((sticker) => (
+            <motion.button
+              key={sticker.id}
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              whileTap={{ scale: 0.9 }}
+              className="p-4 rounded-xl bg-gray-700 hover:bg-gray-600 border-2 border-dashed border-gray-500 hover:border-pink-400 transition-colors aspect-square"
+              onClick={() => addSticker(sticker)}
+              data-testid={`add-sticker-${sticker.id}`}
             >
-              {/* Photo Frames */}
-              <div className="grid grid-cols-2 gap-3">
-                {photos.map((photo, index) => (
-                  <div
-                    key={index}
-                    className="aspect-square rounded overflow-hidden border-2 border-gray-300"
-                    style={{ 
-                      backgroundColor: template?.frame_color || "#ffffff",
-                      transform: `rotate(${index % 2 === 0 ? -1 : 1}deg)`
-                    }}
-                    data-testid={`decorated-photo-${index}`}
-                  >
-                    <img
-                      src={photo}
-                      alt={`Photo ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
+              <img
+                src={sticker.url}
+                alt={sticker.name}
+                className="w-full h-full object-contain"
+              />
+            </motion.button>
+          ))}
+        </div>
 
-              {/* Stickers Layer */}
+        {/* Edit Controls */}
+        {selectedStickerData && (
+          <div className="space-y-6 p-4 bg-gray-700 rounded-xl">
+            <h3 
+              className="text-xl font-bold text-white text-center"
+              style={{ fontFamily: 'var(--font-handwritten)' }}
+            >
+              Edit Sticker
+            </h3>
+            
+            <div>
+              <label className="text-sm text-gray-300 mb-2 block flex items-center gap-2">
+                <ZoomOut className="w-4 h-4" /> Size <ZoomIn className="w-4 h-4 ml-auto" />
+              </label>
+              <Slider
+                value={[selectedStickerData.scale * 100]}
+                onValueChange={([val]) => updateSticker(selectedSticker, { scale: val / 100 })}
+                min={50}
+                max={300}
+                step={10}
+                className="w-full"
+                data-testid="sticker-size-slider"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-300 mb-2 block flex items-center gap-2">
+                <RotateCw className="w-4 h-4" /> Rotation
+              </label>
+              <Slider
+                value={[selectedStickerData.rotation]}
+                onValueChange={([val]) => updateSticker(selectedSticker, { rotation: val })}
+                min={-180}
+                max={180}
+                step={5}
+                className="w-full"
+                data-testid="sticker-rotation-slider"
+              />
+            </div>
+
+            <Button
+              variant="destructive"
+              onClick={() => removeSticker(selectedSticker)}
+              className="w-full"
+              data-testid="remove-sticker-btn"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Remove
+            </Button>
+          </div>
+        )}
+
+        {/* Active Stickers */}
+        {stickers.length > 0 && (
+          <div className="mt-6">
+            <h4 className="text-sm text-gray-400 mb-3" style={{ fontFamily: 'var(--font-handwritten)' }}>
+              Active Stickers ({stickers.length})
+            </h4>
+            <div className="flex flex-wrap gap-2">
               {stickers.map((sticker) => (
-                <motion.div
+                <button
                   key={sticker.id}
-                  className={`absolute cursor-move ${selectedSticker === sticker.id ? "ring-2 ring-pink-500 ring-offset-2" : ""}`}
-                  style={{
-                    left: sticker.x,
-                    top: sticker.y,
-                    transform: `scale(${sticker.scale}) rotate(${sticker.rotation}deg)`,
-                    zIndex: selectedSticker === sticker.id ? 100 : 10
-                  }}
-                  onMouseDown={(e) => handleMouseDown(e, sticker)}
-                  data-testid={`placed-sticker-${sticker.id}`}
+                  className={`w-14 h-14 rounded-lg p-2 transition-all ${
+                    selectedSticker === sticker.id
+                      ? "ring-2 ring-pink-500 bg-gray-600"
+                      : "bg-gray-700 hover:bg-gray-600"
+                  }`}
+                  onClick={() => setSelectedSticker(sticker.id)}
                 >
                   <img
                     src={sticker.url}
                     alt={sticker.name}
-                    className="w-16 h-16 object-contain pointer-events-none"
-                    draggable={false}
+                    className="w-full h-full object-contain"
                   />
-                </motion.div>
+                </button>
               ))}
-
-              {/* Branding */}
-              <div className="mt-4 text-center">
-                <p 
-                  className="text-sm font-bold text-gray-400"
-                  style={{ fontFamily: 'var(--font-heading)' }}
-                >
-                  ✨ Power of Ten ✨
-                </p>
-              </div>
             </div>
           </div>
-        </div>
-      </main>
+        )}
+      </div>
 
-      {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur border-t-2 border-dashed border-gray-200">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <p 
-            className="text-sm text-gray-500"
-            style={{ fontFamily: 'var(--font-handwritten)' }}
-          >
-            Drag stickers around • Tap to select • Resize & rotate!
-          </p>
-          <Button
-            size="lg"
-            onClick={handleFinalize}
-            disabled={loading}
-            className="btn-sketch bg-green-500 hover:bg-green-600 text-white"
-            data-testid="bottom-finalize-btn"
-          >
-            {loading ? "Creating..." : "Done! Get QR →"}
-          </Button>
+      {/* Photo Strip Canvas - Center (BIGGER) */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div
+          ref={canvasRef}
+          className="relative rounded-lg shadow-2xl"
+          style={{
+            width: "320px",
+            height: "960px",
+            backgroundColor: template?.background_color || "#fef9f3",
+            padding: "16px"
+          }}
+          onClick={(e) => {
+            if (e.target === canvasRef.current) {
+              setSelectedSticker(null);
+            }
+          }}
+          data-testid="decoration-canvas"
+        >
+          {/* Photo Frames - 2x6 vertical strip */}
+          <div className="flex flex-col gap-3 h-full">
+            {photos.map((photo, index) => (
+              <div
+                key={index}
+                className="flex-1 rounded overflow-hidden border-2"
+                style={{ 
+                  backgroundColor: template?.frame_color || "#ffffff",
+                  borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db',
+                }}
+                data-testid={`decorated-photo-${index}`}
+              >
+                <img
+                  src={photo}
+                  alt={`Photo ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+            
+            {/* Branding at bottom */}
+            <div className="text-center py-2">
+              <p 
+                className="text-lg font-bold"
+                style={{ 
+                  fontFamily: 'var(--font-heading)',
+                  color: template?.id === 'modern-dark' ? '#9ca3af' : '#6b7280'
+                }}
+              >
+                ✨ Power of Ten ✨
+              </p>
+            </div>
+          </div>
+
+          {/* Stickers Layer */}
+          {stickers.map((sticker) => (
+            <motion.div
+              key={sticker.id}
+              className={`absolute cursor-move ${selectedSticker === sticker.id ? "ring-2 ring-pink-500 ring-offset-2" : ""}`}
+              style={{
+                left: sticker.x,
+                top: sticker.y,
+                transform: `scale(${sticker.scale}) rotate(${sticker.rotation}deg)`,
+                zIndex: selectedSticker === sticker.id ? 100 : 10
+              }}
+              onMouseDown={(e) => handleMouseDown(e, sticker)}
+              data-testid={`placed-sticker-${sticker.id}`}
+            >
+              <img
+                src={sticker.url}
+                alt={sticker.name}
+                className="w-20 h-20 object-contain pointer-events-none"
+                draggable={false}
+              />
+            </motion.div>
+          ))}
         </div>
+      </div>
+
+      {/* Print Button - Right Side */}
+      <div className="w-64 p-6 flex items-center justify-center">
+        <Button
+          size="lg"
+          onClick={handlePrint}
+          disabled={loading}
+          className="btn-sketch px-12 py-10 text-2xl bg-green-500 hover:bg-green-600 text-white flex-col h-auto"
+          data-testid="print-btn"
+        >
+          {loading ? (
+            <>
+              <span className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin mb-2" />
+              <span>Creating...</span>
+            </>
+          ) : (
+            <>
+              <Printer className="w-16 h-16 mb-2" />
+              <span>Print!</span>
+            </>
+          )}
+        </Button>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Camera, RotateCcw, ArrowRight, ImageIcon } from "lucide-react";
+import { Camera, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -21,10 +21,11 @@ export default function CameraCapturePage() {
   const [countdown, setCountdown] = useState(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(null);
-  const [autoCapture, setAutoCapture] = useState(false);
+  const [template, setTemplate] = useState(null);
 
   useEffect(() => {
     initCamera();
+    fetchTemplate();
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -32,11 +33,22 @@ export default function CameraCapturePage() {
     };
   }, []);
 
+  const fetchTemplate = async () => {
+    try {
+      const sessionRes = await axios.get(`${API}/sessions/${sessionId}`);
+      const templatesRes = await axios.get(`${API}/templates`);
+      const currentTemplate = templatesRes.data.find(t => t.id === sessionRes.data.template_id);
+      setTemplate(currentTemplate);
+    } catch (error) {
+      console.error("Error fetching template:", error);
+    }
+  };
+
   const initCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 1080 },
+          width: { ideal: 1920 },
           height: { ideal: 1080 },
           facingMode: "user"
         },
@@ -67,6 +79,7 @@ export default function CameraCapturePage() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
+    // Set canvas to 1080x1080 square for each photo
     const size = 1080;
     canvas.width = size;
     canvas.height = size;
@@ -125,46 +138,6 @@ export default function CameraCapturePage() {
     }, 1000);
   }, [isCapturing, photos.length, capturePhoto]);
 
-  const startAutoCapture = () => {
-    if (photos.length >= 4) return;
-    setAutoCapture(true);
-    captureSequence(0);
-  };
-
-  const captureSequence = (index) => {
-    if (index >= 4) {
-      setAutoCapture(false);
-      return;
-    }
-
-    setIsCapturing(true);
-    setCountdown(3);
-
-    let count = 3;
-    const countdownInterval = setInterval(() => {
-      count -= 1;
-      if (count <= 0) {
-        clearInterval(countdownInterval);
-        setCountdown(null);
-        capturePhoto().then(() => {
-          setIsCapturing(false);
-          if (index < 3) {
-            setTimeout(() => captureSequence(index + 1), 1000);
-          } else {
-            setAutoCapture(false);
-          }
-        });
-      } else {
-        setCountdown(count);
-      }
-    }, 1000);
-  };
-
-  const resetPhotos = () => {
-    setPhotos([]);
-    setAutoCapture(false);
-  };
-
   const proceedToDecorate = () => {
     if (photos.length === 0) {
       toast.error("Please capture at least one photo");
@@ -174,211 +147,174 @@ export default function CameraCapturePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-800">
-      {/* Header */}
-      <header className="py-4 px-6 flex items-center justify-between">
-        <h1 
-          className="text-3xl font-bold text-white"
-          style={{ fontFamily: 'var(--font-heading)' }}
-          data-testid="capture-title"
-        >
-          📸 Say Cheese!
-        </h1>
-        <div 
-          className="px-4 py-2 bg-white/10 rounded-full text-white"
-          style={{ fontFamily: 'var(--font-handwritten)' }}
-        >
-          Photo {Math.min(photos.length + 1, 4)} of 4
-        </div>
-      </header>
+    <div className="min-h-screen bg-gray-900 flex flex-col">
+      {/* Main Content - Full Screen Monitor */}
+      <main className="flex-1 flex">
+        {/* Camera Monitor - Left Side */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div 
+            className="relative w-full h-full max-w-[1920px] max-h-[1080px] rounded-lg overflow-hidden bg-black"
+            style={{ aspectRatio: "16/9" }}
+            data-testid="camera-view"
+          >
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover"
+              style={{ transform: "scaleX(-1)" }}
+            />
+            <canvas ref={canvasRef} className="hidden" />
 
-      {/* Main Content */}
-      <main className="px-6 pb-8">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Camera View */}
-          <div className="lg:col-span-3">
-            <div 
-              className="relative rounded-lg overflow-hidden bg-gray-900 mx-auto sketch-border"
-              style={{ width: "100%", maxWidth: "600px", aspectRatio: "1/1", borderColor: '#fff' }}
-              data-testid="camera-view"
-            >
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-                style={{ transform: "scaleX(-1)" }}
-              />
-              <canvas ref={canvasRef} className="hidden" />
-
-              {cameraError && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95">
-                  <div className="text-center p-8">
-                    <div className="text-6xl mb-4">📷</div>
-                    <p className="text-lg text-white mb-4" style={{ fontFamily: 'var(--font-handwritten)' }}>
-                      {cameraError}
-                    </p>
-                    <Button 
-                      className="btn-sketch bg-pink-500 hover:bg-pink-600 text-white"
-                      onClick={initCamera}
-                      data-testid="retry-camera-btn"
-                    >
-                      Try Again
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {!cameraReady && !cameraError && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95">
-                  <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-white" style={{ fontFamily: 'var(--font-handwritten)' }}>
-                      Getting camera ready...
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <AnimatePresence>
-                {countdown !== null && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 flex items-center justify-center bg-black/60 z-50"
-                    data-testid="countdown-overlay"
+            {cameraError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95">
+                <div className="text-center p-8">
+                  <div className="text-8xl mb-6">📷</div>
+                  <p className="text-2xl text-white mb-6" style={{ fontFamily: 'var(--font-handwritten)' }}>
+                    {cameraError}
+                  </p>
+                  <Button 
+                    className="btn-sketch bg-pink-500 hover:bg-pink-600 text-white text-xl px-8 py-4"
+                    onClick={initCamera}
+                    data-testid="retry-camera-btn"
                   >
-                    <motion.span
-                      key={countdown}
-                      initial={{ scale: 0.5, opacity: 0, rotate: -10 }}
-                      animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                      exit={{ scale: 1.5, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="text-[10rem] font-bold text-white countdown-number-sketch"
-                      data-testid="countdown-number"
-                    >
-                      {countdown}
-                    </motion.span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <div 
-                className="absolute top-4 left-4 px-4 py-2 bg-black/50 backdrop-blur rounded-full text-white"
-                style={{ fontFamily: 'var(--font-handwritten)' }}
-              >
-                {photos.length}/4 ✓
+                    Try Again
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Capture Controls */}
-            <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={resetPhotos}
-                disabled={photos.length === 0}
-                className="btn-sketch bg-white hover:bg-gray-100"
-                data-testid="reset-photos-btn"
-              >
-                <RotateCcw className="w-5 h-5 mr-2" />
-                Reset
-              </Button>
+            {!cameraReady && !cameraError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95">
+                <div className="text-center">
+                  <div className="w-20 h-20 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-6" />
+                  <p className="text-2xl text-white" style={{ fontFamily: 'var(--font-handwritten)' }}>
+                    Getting camera ready...
+                  </p>
+                </div>
+              </div>
+            )}
 
-              {photos.length < 4 ? (
-                <>
-                  <Button
-                    size="lg"
-                    onClick={startCountdown}
-                    disabled={!cameraReady || isCapturing}
-                    className="btn-sketch px-10 py-6 text-xl bg-pink-500 hover:bg-pink-600 text-white"
-                    data-testid="capture-btn"
-                  >
-                    <Camera className="w-6 h-6 mr-2" />
-                    {isCapturing ? "Wait..." : "Snap!"}
-                  </Button>
-
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    onClick={startAutoCapture}
-                    disabled={!cameraReady || isCapturing || autoCapture}
-                    className="btn-sketch bg-yellow-400 hover:bg-yellow-500 text-gray-800"
-                    data-testid="auto-capture-btn"
-                  >
-                    Auto x4 ⚡
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  size="lg"
-                  onClick={proceedToDecorate}
-                  className="btn-sketch px-10 py-6 text-xl bg-green-500 hover:bg-green-600 text-white"
-                  data-testid="proceed-decorate-btn"
+            <AnimatePresence>
+              {countdown !== null && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 flex items-center justify-center bg-black/60 z-50"
+                  data-testid="countdown-overlay"
                 >
-                  <ArrowRight className="w-6 h-6 mr-2" />
-                  Add Stickers!
-                </Button>
+                  <motion.span
+                    key={countdown}
+                    initial={{ scale: 0.5, opacity: 0, rotate: -10 }}
+                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                    exit={{ scale: 1.5, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-[20rem] font-bold text-white countdown-number-sketch"
+                    data-testid="countdown-number"
+                  >
+                    {countdown}
+                  </motion.span>
+                </motion.div>
               )}
+            </AnimatePresence>
+
+            {/* Photo count badge */}
+            <div 
+              className="absolute top-6 left-6 px-6 py-3 bg-black/60 backdrop-blur rounded-full text-white text-2xl"
+              style={{ fontFamily: 'var(--font-handwritten)' }}
+            >
+              {photos.length}/4 Photos
             </div>
           </div>
+        </div>
 
-          {/* Photo Strip Preview */}
-          <div className="lg:col-span-1">
-            <div className="sketch-border bg-white p-4" style={{ transform: 'rotate(1deg)' }}>
-              <h3 
-                className="text-xl font-bold mb-4 text-center text-gray-800"
-                style={{ fontFamily: 'var(--font-heading)' }}
+        {/* Photo Strip Preview - Right Side */}
+        <div className="w-80 p-4 flex flex-col">
+          <div 
+            className="sketch-border bg-white p-3 flex-1"
+            style={{ 
+              backgroundColor: template?.background_color || '#fef9f3',
+              transform: 'rotate(1deg)'
+            }}
+          >
+            <h3 
+              className="text-2xl font-bold mb-3 text-center text-gray-800"
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
+              📸 Your Strip
+            </h3>
+            
+            {/* 2x6 aspect ratio preview - vertical strip with 4 photos */}
+            <div className="flex flex-col gap-2">
+              {[0, 1, 2, 3].map((index) => (
+                <div
+                  key={index}
+                  className="aspect-square rounded overflow-hidden border-2 border-dashed"
+                  style={{ 
+                    borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db',
+                    backgroundColor: template?.frame_color || '#ffffff',
+                    transform: `rotate(${index % 2 === 0 ? -0.5 : 0.5}deg)`
+                  }}
+                  data-testid={`photo-preview-${index}`}
+                >
+                  {photos[index] ? (
+                    <img
+                      src={photos[index]}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                      <span className="text-3xl opacity-30">{index + 1}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Branding */}
+            <div className="mt-3 text-center">
+              <p 
+                className="text-sm font-bold"
+                style={{ 
+                  fontFamily: 'var(--font-heading)',
+                  color: template?.id === 'modern-dark' ? '#9ca3af' : '#6b7280'
+                }}
               >
-                Your Photos 📸
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                {[0, 1, 2, 3].map((index) => (
-                  <div
-                    key={index}
-                    className="aspect-square rounded overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300"
-                    style={{ transform: `rotate(${index % 2 === 0 ? -1 : 1}deg)` }}
-                    data-testid={`photo-preview-${index}`}
-                  >
-                    {photos[index] ? (
-                      <img
-                        src={photos[index]}
-                        alt={`Photo ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageIcon className="w-6 h-6 text-gray-300" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {photos.length > 0 && photos.length < 4 && (
-                <p 
-                  className="text-center text-sm text-gray-500 mt-4"
-                  style={{ fontFamily: 'var(--font-handwritten)' }}
-                >
-                  {4 - photos.length} more to go!
-                </p>
-              )}
-
-              {photos.length === 4 && (
-                <Button
-                  onClick={proceedToDecorate}
-                  className="w-full mt-4 btn-sketch bg-green-500 hover:bg-green-600 text-white"
-                  data-testid="sidebar-proceed-btn"
-                >
-                  Decorate! →
-                </Button>
-              )}
+                ✨ Power of Ten ✨
+              </p>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Bottom Controls */}
+      <div className="p-6 flex justify-center gap-6">
+        {photos.length < 4 ? (
+          <Button
+            size="lg"
+            onClick={startCountdown}
+            disabled={!cameraReady || isCapturing}
+            className="btn-sketch px-16 py-8 text-3xl bg-pink-500 hover:bg-pink-600 text-white"
+            data-testid="capture-btn"
+          >
+            <Camera className="w-10 h-10 mr-3" />
+            {isCapturing ? "Wait..." : "Snap!"}
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            onClick={proceedToDecorate}
+            className="btn-sketch px-16 py-8 text-3xl bg-green-500 hover:bg-green-600 text-white"
+            data-testid="proceed-decorate-btn"
+          >
+            <ArrowRight className="w-10 h-10 mr-3" />
+            Add Stickers!
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
