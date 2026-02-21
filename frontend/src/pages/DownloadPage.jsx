@@ -55,12 +55,16 @@ export default function DownloadPage() {
       // Build media array
       const mediaItems = [];
       
-      // Add individual photos first
+      // Add individual photos first (they could be base64 or file paths)
       const photos = sessionData.photos || [];
       photos.forEach((photo, idx) => {
+        // Check if it's already a full URL/base64
+        const photoUrl = photo.startsWith('data:') || photo.startsWith('http') 
+          ? photo 
+          : `${API.replace('/api', '')}${photo}`;
         mediaItems.push({ 
           type: 'photo', 
-          src: `${API.replace('/api', '')}${photo}`, 
+          src: photoUrl, 
           label: `Photo ${idx + 1}` 
         });
       });
@@ -68,9 +72,12 @@ export default function DownloadPage() {
       // Add photo strip
       const stripUrl = sessionData.photobooth_image_url || sessionData.final_image_url;
       if (stripUrl) {
+        const fullStripUrl = stripUrl.startsWith('data:') || stripUrl.startsWith('http')
+          ? stripUrl
+          : `${API.replace('/api', '')}${stripUrl}`;
         mediaItems.push({ 
           type: 'strip', 
-          src: `${API.replace('/api', '')}${stripUrl}`, 
+          src: fullStripUrl, 
           label: 'Photo Strip' 
         });
       }
