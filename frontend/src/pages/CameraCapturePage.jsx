@@ -79,7 +79,6 @@ export default function CameraCapturePage() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    // Set canvas to 1080x1080 square for each photo
     const size = 1080;
     canvas.width = size;
     canvas.height = size;
@@ -147,14 +146,30 @@ export default function CameraCapturePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
-      {/* Main Content - Full Screen Monitor */}
-      <main className="flex-1 flex">
-        {/* Camera Monitor - Left Side */}
-        <div className="flex-1 flex items-center justify-center p-4">
+    <div className="min-h-screen paper-bg flex flex-col">
+      {/* Header */}
+      <header className="py-4 px-6 text-center">
+        <h1 
+          className="text-4xl font-bold text-gray-800"
+          style={{ fontFamily: 'var(--font-heading)' }}
+        >
+          📸 Say Cheese!
+        </h1>
+        <p 
+          className="text-gray-500 mt-1"
+          style={{ fontFamily: 'var(--font-handwritten)' }}
+        >
+          Photo {Math.min(photos.length + 1, 4)} of 4
+        </p>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 flex items-center justify-center gap-8 px-6 pb-6">
+        {/* Camera Monitor - Smaller */}
+        <div className="flex-shrink-0">
           <div 
-            className="relative w-full h-full max-w-[1920px] max-h-[1080px] rounded-lg overflow-hidden bg-black"
-            style={{ aspectRatio: "16/9" }}
+            className="relative rounded-2xl overflow-hidden sketch-border bg-white"
+            style={{ width: "640px", height: "480px" }}
             data-testid="camera-view"
           >
             <video
@@ -168,14 +183,14 @@ export default function CameraCapturePage() {
             <canvas ref={canvasRef} className="hidden" />
 
             {cameraError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95">
-                <div className="text-center p-8">
-                  <div className="text-8xl mb-6">📷</div>
-                  <p className="text-2xl text-white mb-6" style={{ fontFamily: 'var(--font-handwritten)' }}>
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="text-center p-6">
+                  <div className="text-6xl mb-4">📷</div>
+                  <p className="text-lg text-gray-600 mb-4" style={{ fontFamily: 'var(--font-handwritten)' }}>
                     {cameraError}
                   </p>
                   <Button 
-                    className="btn-sketch bg-pink-500 hover:bg-pink-600 text-white text-xl px-8 py-4"
+                    className="btn-sketch bg-pink-400 hover:bg-pink-500 text-white"
                     onClick={initCamera}
                     data-testid="retry-camera-btn"
                   >
@@ -186,10 +201,10 @@ export default function CameraCapturePage() {
             )}
 
             {!cameraReady && !cameraError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-900/95">
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                 <div className="text-center">
-                  <div className="w-20 h-20 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-6" />
-                  <p className="text-2xl text-white" style={{ fontFamily: 'var(--font-handwritten)' }}>
+                  <div className="w-12 h-12 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-gray-500" style={{ fontFamily: 'var(--font-handwritten)' }}>
                     Getting camera ready...
                   </p>
                 </div>
@@ -202,16 +217,16 @@ export default function CameraCapturePage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="absolute inset-0 flex items-center justify-center bg-black/60 z-50"
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 z-50"
                   data-testid="countdown-overlay"
                 >
                   <motion.span
                     key={countdown}
-                    initial={{ scale: 0.5, opacity: 0, rotate: -10 }}
-                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 1.5, opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="text-[20rem] font-bold text-white countdown-number-sketch"
+                    className="text-[12rem] font-bold text-white countdown-number-sketch"
                     data-testid="countdown-number"
                   >
                     {countdown}
@@ -222,7 +237,7 @@ export default function CameraCapturePage() {
 
             {/* Photo count badge */}
             <div 
-              className="absolute top-6 left-6 px-6 py-3 bg-black/60 backdrop-blur rounded-full text-white text-2xl"
+              className="absolute top-4 left-4 px-4 py-2 bg-white/90 backdrop-blur rounded-full text-gray-800 sketch-border-light"
               style={{ fontFamily: 'var(--font-handwritten)' }}
             >
               {photos.length}/4 Photos
@@ -230,23 +245,24 @@ export default function CameraCapturePage() {
           </div>
         </div>
 
-        {/* Photo Strip Preview - Right Side */}
-        <div className="w-80 p-4 flex flex-col">
+        {/* Photo Strip Preview */}
+        <div className="flex-shrink-0">
           <div 
-            className="sketch-border bg-white p-3 flex-1"
+            className="sketch-border bg-white p-4"
             style={{ 
               backgroundColor: template?.background_color || '#fef9f3',
+              width: '220px',
               transform: 'rotate(1deg)'
             }}
           >
             <h3 
-              className="text-2xl font-bold mb-3 text-center text-gray-800"
+              className="text-xl font-bold mb-3 text-center text-gray-800"
               style={{ fontFamily: 'var(--font-heading)' }}
             >
-              📸 Your Strip
+              Your Strip 📸
             </h3>
             
-            {/* 2x6 aspect ratio preview - vertical strip with 4 photos */}
+            {/* 4 photo slots */}
             <div className="flex flex-col gap-2">
               {[0, 1, 2, 3].map((index) => (
                 <div
@@ -267,7 +283,7 @@ export default function CameraCapturePage() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                      <span className="text-3xl opacity-30">{index + 1}</span>
+                      <span className="text-2xl text-gray-300">{index + 1}</span>
                     </div>
                   )}
                 </div>
@@ -277,11 +293,8 @@ export default function CameraCapturePage() {
             {/* Branding */}
             <div className="mt-3 text-center">
               <p 
-                className="text-sm font-bold"
-                style={{ 
-                  fontFamily: 'var(--font-heading)',
-                  color: template?.id === 'modern-dark' ? '#9ca3af' : '#6b7280'
-                }}
+                className="text-xs font-bold text-gray-400"
+                style={{ fontFamily: 'var(--font-heading)' }}
               >
                 ✨ Power of Ten ✨
               </p>
@@ -291,26 +304,26 @@ export default function CameraCapturePage() {
       </main>
 
       {/* Bottom Controls */}
-      <div className="p-6 flex justify-center gap-6">
+      <div className="py-6 flex justify-center">
         {photos.length < 4 ? (
           <Button
             size="lg"
             onClick={startCountdown}
             disabled={!cameraReady || isCapturing}
-            className="btn-sketch px-16 py-8 text-3xl bg-pink-500 hover:bg-pink-600 text-white"
+            className="btn-sketch px-12 py-6 text-2xl bg-pink-400 hover:bg-pink-500 text-white"
             data-testid="capture-btn"
           >
-            <Camera className="w-10 h-10 mr-3" />
+            <Camera className="w-8 h-8 mr-3" />
             {isCapturing ? "Wait..." : "Snap!"}
           </Button>
         ) : (
           <Button
             size="lg"
             onClick={proceedToDecorate}
-            className="btn-sketch px-16 py-8 text-3xl bg-green-500 hover:bg-green-600 text-white"
+            className="btn-sketch px-12 py-6 text-2xl bg-pink-400 hover:bg-pink-500 text-white"
             data-testid="proceed-decorate-btn"
           >
-            <ArrowRight className="w-10 h-10 mr-3" />
+            <ArrowRight className="w-8 h-8 mr-3" />
             Add Stickers!
           </Button>
         )}

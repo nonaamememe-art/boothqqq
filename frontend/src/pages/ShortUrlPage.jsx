@@ -34,10 +34,9 @@ export default function ShortUrlPage() {
       const sessionPhotos = sessionRes.data.photos || [];
       setPhotos(sessionPhotos);
       
-      // Build media array: 4 photos + photo strip + video thumbnail
+      // Build media array
       const mediaItems = [];
       
-      // Add 4 individual photos
       sessionPhotos.forEach((photo, idx) => {
         mediaItems.push({
           type: 'photo',
@@ -46,7 +45,6 @@ export default function ShortUrlPage() {
         });
       });
       
-      // Add photo strip
       if (sessionRes.data.final_image_url) {
         mediaItems.push({
           type: 'strip',
@@ -55,7 +53,6 @@ export default function ShortUrlPage() {
         });
       }
       
-      // Add video
       if (sessionRes.data.video_url) {
         mediaItems.push({
           type: 'video',
@@ -94,7 +91,6 @@ export default function ShortUrlPage() {
     } else if (currentMedia.type === 'strip') {
       window.open(`${API.replace('/api', '')}/api/download/${session.fullId}/image`, '_blank');
     } else {
-      // For individual photos, create a download link
       const link = document.createElement('a');
       link.href = currentMedia.src;
       link.download = `photo-${currentIndex + 1}.jpg`;
@@ -129,10 +125,10 @@ export default function ShortUrlPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center paper-bg">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-xl text-white">Loading...</p>
+          <div className="w-16 h-16 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-xl text-gray-600" style={{ fontFamily: 'var(--font-handwritten)' }}>Loading...</p>
         </div>
       </div>
     );
@@ -140,9 +136,9 @@ export default function ShortUrlPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center paper-bg">
         <div className="text-center">
-          <p className="text-2xl text-white mb-4">{error}</p>
+          <p className="text-2xl text-gray-600 mb-4" style={{ fontFamily: 'var(--font-handwritten)' }}>{error}</p>
         </div>
       </div>
     );
@@ -151,18 +147,21 @@ export default function ShortUrlPage() {
   const currentMedia = allMedia[currentIndex];
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
+    <div className="min-h-screen paper-bg flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4">
-        <h1 className="text-xl font-medium text-white">
+      <header className="flex items-center justify-between px-6 py-4 border-b-2 border-dashed border-gray-300">
+        <h1 
+          className="text-2xl font-bold text-gray-800"
+          style={{ fontFamily: 'var(--font-heading)' }}
+        >
           {eventTitle}
         </h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={handleDownload}
-            className="text-white hover:bg-white/10"
+            className="text-gray-600 hover:bg-pink-50 hover:text-pink-500"
             data-testid="download-btn"
           >
             <Download className="w-6 h-6" />
@@ -171,7 +170,7 @@ export default function ShortUrlPage() {
             variant="ghost"
             size="icon"
             onClick={handleShare}
-            className="text-white hover:bg-white/10"
+            className="text-gray-600 hover:bg-pink-50 hover:text-pink-500"
             data-testid="share-btn"
           >
             <Share2 className="w-6 h-6" />
@@ -184,7 +183,7 @@ export default function ShortUrlPage() {
         {/* Previous Button */}
         <button
           onClick={handlePrev}
-          className="absolute left-4 z-10 p-2 text-white/70 hover:text-white transition-colors"
+          className="absolute left-4 z-10 p-2 text-gray-400 hover:text-pink-500 transition-colors"
           data-testid="prev-btn"
         >
           <ChevronLeft className="w-12 h-12" />
@@ -198,30 +197,35 @@ export default function ShortUrlPage() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="relative max-w-4xl max-h-[70vh] flex items-center justify-center"
+            className="relative max-w-4xl max-h-[65vh] flex items-center justify-center"
           >
-            {currentMedia?.type === 'video' ? (
-              <video
-                src={currentMedia.src}
-                autoPlay
-                loop
-                muted
-                playsInline
-                controls
-                className="max-w-full max-h-[70vh] rounded-lg"
-                data-testid="video-preview"
-              />
-            ) : (
-              <img
-                src={currentMedia?.src}
-                alt={currentMedia?.label}
-                className="max-w-full max-h-[70vh] object-contain rounded-lg"
-                data-testid="image-preview"
-              />
-            )}
+            <div className="sketch-border bg-white p-3">
+              {currentMedia?.type === 'video' ? (
+                <video
+                  src={currentMedia.src}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  controls
+                  className="max-w-full max-h-[60vh] rounded"
+                  data-testid="video-preview"
+                />
+              ) : (
+                <img
+                  src={currentMedia?.src}
+                  alt={currentMedia?.label}
+                  className="max-w-full max-h-[60vh] object-contain rounded"
+                  data-testid="image-preview"
+                />
+              )}
+            </div>
 
             {/* Photo Counter */}
-            <div className="absolute top-4 right-4 px-3 py-1 bg-black/60 rounded-full text-white text-sm">
+            <div 
+              className="absolute top-6 right-6 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-gray-600 text-sm sketch-border-light"
+              style={{ fontFamily: 'var(--font-handwritten)' }}
+            >
               {currentIndex + 1}/{allMedia.length}
             </div>
           </motion.div>
@@ -230,7 +234,7 @@ export default function ShortUrlPage() {
         {/* Next Button */}
         <button
           onClick={handleNext}
-          className="absolute right-4 z-10 p-2 text-white/70 hover:text-white transition-colors"
+          className="absolute right-4 z-10 p-2 text-gray-400 hover:text-pink-500 transition-colors"
           data-testid="next-btn"
         >
           <ChevronRight className="w-12 h-12" />
@@ -238,7 +242,7 @@ export default function ShortUrlPage() {
       </main>
 
       {/* Thumbnail Gallery */}
-      <div className="py-6 px-4">
+      <div className="py-6 px-4 border-t-2 border-dashed border-gray-300">
         <div className="flex items-center justify-center gap-3 overflow-x-auto">
           {allMedia.map((media, index) => (
             <motion.button
@@ -248,13 +252,13 @@ export default function ShortUrlPage() {
               onClick={() => handleThumbnailClick(index)}
               className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
                 index === currentIndex
-                  ? 'border-white shadow-lg shadow-white/20'
-                  : 'border-transparent opacity-60 hover:opacity-100'
+                  ? 'border-pink-400 shadow-lg'
+                  : 'border-gray-200 opacity-60 hover:opacity-100 hover:border-pink-300'
               }`}
               data-testid={`thumbnail-${index}`}
             >
               {media.type === 'video' ? (
-                <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                   <span className="text-2xl">🎬</span>
                 </div>
               ) : (
