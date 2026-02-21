@@ -15,6 +15,7 @@ export default function CameraCapturePage() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const isCapturingRef = useRef(false);
 
   const [photos, setPhotos] = useState([]);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -22,6 +23,7 @@ export default function CameraCapturePage() {
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [autoCapture, setAutoCapture] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   // Initialize camera
   useEffect(() => {
@@ -37,7 +39,7 @@ export default function CameraCapturePage() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 1920 },
+          width: { ideal: 1080 },
           height: { ideal: 1080 },
           facingMode: "user"
         },
@@ -59,27 +61,45 @@ export default function CameraCapturePage() {
   };
 
   const capturePhoto = useCallback(async () => {
-    if (!videoRef.current || !canvasRef.current || photos.length >= 4) return;
+    // Prevent double capture using ref
+    if (isCapturingRef.current) return null;
+    if (!videoRef.current || !canvasRef.current || photos.length >= 4) return null;
+
+    isCapturingRef.current = true;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    // Set canvas size to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    // Set canvas size to 1080x1080 (square)
+    const size = 1080;
+    canvas.width = size;
+    canvas.height = size;
 
-    // Draw video frame to canvas (mirrored)
+    // Calculate crop to get center square from video
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    const minDimension = Math.min(videoWidth, videoHeight);
+    const sx = (videoWidth - minDimension) / 2;
+    const sy = (videoHeight - minDimension) / 2;
+
+    // Draw video frame to canvas (mirrored and cropped to square)
     ctx.save();
     ctx.scale(-1, 1);
-    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.drawImage(
+      video,
+      sx, sy, minDimension, minDimension,  // Source crop
+      -size, 0, size, size  // Destination (mirrored)
+    );
     ctx.restore();
 
     // Get base64 image
     const photoData = canvas.toDataURL("image/jpeg", 0.9);
     
     // Add to local state
-    setPhotos(prev => [...prev, photoData]);
+    const newPhotos = [...photos, photoData];
+    setPhotos(newPhotos);
+    setCurrentPhotoIndex(newPhotos.length);
 
     // Save to backend
     try {
@@ -91,8 +111,9 @@ export default function CameraCapturePage() {
       console.error("Error saving photo:", error);
     }
 
+    isCapturingRef.current = false;
     return photoData;
-  }, [photos.length, sessionId]);
+  }, [photos, sessionId]);
 
   const startCountdown = useCallback(() => {
     if (isCapturing || photos.length >= 4) return;
@@ -100,34 +121,66 @@ export default function CameraCapturePage() {
     setIsCapturing(true);
     setCountdown(3);
 
+    let count = 3;
     const countdownInterval = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval);
-          capturePhoto().then(() => {
-            setIsCapturing(false);
-            setCountdown(null);
-            
-            // Auto-capture next if enabled and not at max
-            if (autoCapture && photos.length < 3) {
-              setTimeout(() => startCountdown(), 1000);
-            }
-          });
-          return null;
-        }
-        return prev - 1;
-      });
+      count -= 1;
+      if (count <= 0) {
+        clearInterval(countdownInterval);
+        setCountdown(null);
+        
+        // Capture single photo
+        capturePhoto().then(() => {
+          setIsCapturing(false);
+        });
+      } else {
+        setCountdown(count);
+      }
     }, 1000);
-  }, [isCapturing, photos.length, capturePhoto, autoCapture]);
+  }, [isCapturing, photos.length, capturePhoto]);
 
   const startAutoCapture = () => {
+    if (photos.length >= 4) return;
+    
     setAutoCapture(true);
-    startCountdown();
+    captureSequence(0);
+  };
+
+  const captureSequence = (index) => {
+    if (index >= 4) {
+      setAutoCapture(false);
+      return;
+    }
+
+    setIsCapturing(true);
+    setCountdown(3);
+
+    let count = 3;
+    const countdownInterval = setInterval(() => {
+      count -= 1;
+      if (count <= 0) {
+        clearInterval(countdownInterval);
+        setCountdown(null);
+        
+        capturePhoto().then(() => {
+          setIsCapturing(false);
+          
+          // Continue to next photo after delay
+          if (index < 3) {
+            setTimeout(() => captureSequence(index + 1), 1000);
+          } else {
+            setAutoCapture(false);
+          }
+        });
+      } else {
+        setCountdown(count);
+      }
+    }, 1000);
   };
 
   const resetPhotos = () => {
     setPhotos([]);
     setAutoCapture(false);
+    setCurrentPhotoIndex(0);
   };
 
   const proceedToDecorate = () => {
@@ -160,7 +213,8 @@ export default function CameraCapturePage() {
           {/* Camera View */}
           <div className="lg:col-span-3">
             <div 
-              className="camera-container relative rounded-2xl overflow-hidden bg-slate-800"
+              className="relative rounded-2xl overflow-hidden bg-slate-800 mx-auto"
+              style={{ width: "100%", maxWidth: "800px", aspectRatio: "1/1" }}
               data-testid="camera-view"
             >
               {/* Video Feed */}
@@ -208,7 +262,7 @@ export default function CameraCapturePage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="countdown-overlay"
+                    className="absolute inset-0 flex items-center justify-center bg-black/60 z-50"
                     data-testid="countdown-overlay"
                   >
                     <motion.span
@@ -217,7 +271,8 @@ export default function CameraCapturePage() {
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 1.5, opacity: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="countdown-text"
+                      className="text-[12rem] font-bold text-white"
+                      style={{ textShadow: "0 0 60px rgba(255,255,255,0.5)" }}
                       data-testid="countdown-number"
                     >
                       {countdown}
@@ -288,11 +343,11 @@ export default function CameraCapturePage() {
           <div className="lg:col-span-1">
             <Card className="bg-slate-800 border-slate-700 p-4">
               <h3 className="text-lg font-semibold mb-4 text-center">Your Photos</h3>
-              <div className="photo-strip-preview mx-auto" style={{ backgroundColor: '#1e293b' }}>
+              <div className="space-y-3">
                 {[0, 1, 2, 3].map((index) => (
                   <div
                     key={index}
-                    className="photo-frame"
+                    className="aspect-square rounded-lg overflow-hidden bg-slate-700"
                     data-testid={`photo-preview-${index}`}
                   >
                     {photos[index] ? (
@@ -302,7 +357,7 @@ export default function CameraCapturePage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-slate-700">
+                      <div className="w-full h-full flex items-center justify-center">
                         <Image className="w-8 h-8 text-slate-500" />
                       </div>
                     )}
