@@ -280,33 +280,33 @@ export default function DownloadPage() {
         )}
       </main>
 
-      {/* Thumbnail Gallery */}
-      <div className="bg-gray-100 py-4 px-2 border-t">
-        <div className="flex items-center justify-start gap-3 overflow-x-auto pb-2 px-2">
+      {/* Thumbnail Gallery - Smaller with frames */}
+      <div className="bg-gray-100 py-3 px-2 border-t">
+        <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2 px-2">
           {allMedia.map((media, index) => (
             <button
               key={index}
               onClick={() => setCurrentIndex(index)}
-              className={`flex-shrink-0 rounded-lg overflow-hidden border-3 transition-all ${
+              className={`flex-shrink-0 rounded-lg overflow-hidden transition-all p-1 bg-white ${
                 index === currentIndex 
-                  ? 'border-gray-800 ring-2 ring-gray-600' 
-                  : 'border-transparent opacity-70 hover:opacity-100'
+                  ? 'ring-2 ring-gray-800 shadow-md' 
+                  : 'opacity-70 hover:opacity-100 shadow'
               }`}
               style={{ 
-                width: media.type === 'strip' ? '60px' : '100px', 
-                height: media.type === 'strip' ? '120px' : '75px' 
+                width: media.type === 'strip' ? '40px' : '70px', 
+                height: media.type === 'strip' ? '80px' : '52px' 
               }}
               data-testid={`thumbnail-${index}`}
             >
               {media.type === 'video' ? (
-                <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                  <span className="text-2xl">🎬</span>
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded">
+                  <span className="text-lg">🎬</span>
                 </div>
               ) : (
                 <img 
                   src={media.src} 
                   alt={media.label} 
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded"
                 />
               )}
             </button>
