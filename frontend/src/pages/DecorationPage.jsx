@@ -173,27 +173,66 @@ export default function DecorationPage() {
       <div className="flex-1 flex items-center justify-center">
         <div
           ref={canvasRef}
-          className="relative sketch-border"
-          style={{ width: "400px", backgroundColor: template?.background_color || "#fef9f3", padding: "20px" }}
+          className="relative"
+          style={{ 
+            width: template?.template_image_url ? "auto" : "400px",
+            backgroundColor: template?.template_image_url ? "transparent" : (template?.background_color || "#fef9f3"),
+            padding: template?.template_image_url ? "0" : "20px"
+          }}
           onClick={(e) => { if (e.target === canvasRef.current) setSelectedSticker(null); }}
         >
-          <div className="flex flex-col gap-4">
-            {photos.map((photo, index) => (
-              <div
-                key={index}
-                className="rounded overflow-hidden border-2"
-                style={{ aspectRatio: "16/9", backgroundColor: template?.frame_color || "#ffffff", borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db' }}
-              >
-                <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
-              </div>
-            ))}
-            <div className="text-center py-2">
-              <p className="text-sm font-bold" style={{ fontFamily: 'var(--font-heading)', color: template?.id === 'modern-dark' ? '#9ca3af' : '#6b7280' }}>
-                ✨ Power of Ten ✨
-              </p>
+          {/* Custom Template Image */}
+          {template?.template_image_url ? (
+            <div className="relative">
+              <img 
+                src={template.template_image_url.startsWith('http') ? template.template_image_url : `${API.replace('/api', '')}${template.template_image_url}`}
+                alt="Template"
+                className="max-h-[700px]"
+                style={{ display: 'block' }}
+              />
+              {/* Photos positioned on template */}
+              {photos.map((photo, index) => {
+                const slot = template.photo_slots?.[index] || { x: 20, y: 20 + index * 167, width: 280, height: 157 };
+                return (
+                  <div
+                    key={index}
+                    className="absolute overflow-hidden"
+                    style={{
+                      left: `${slot.x}px`,
+                      top: `${slot.y}px`,
+                      width: `${slot.width}px`,
+                      height: `${slot.height}px`,
+                      transform: slot.rotation ? `rotate(${slot.rotation}deg)` : undefined
+                    }}
+                  >
+                    <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          ) : (
+            /* Default Layout */
+            <div className="sketch-border p-5" style={{ backgroundColor: template?.background_color || "#fef9f3" }}>
+              <div className="flex flex-col gap-4">
+                {photos.map((photo, index) => (
+                  <div
+                    key={index}
+                    className="rounded overflow-hidden border-2"
+                    style={{ aspectRatio: "16/9", backgroundColor: template?.frame_color || "#ffffff", borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db' }}
+                  >
+                    <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                  </div>
+                ))}
+                <div className="text-center py-2">
+                  <p className="text-sm font-bold" style={{ fontFamily: 'var(--font-heading)', color: template?.id === 'modern-dark' ? '#9ca3af' : '#6b7280' }}>
+                    ✨ Power of Ten ✨
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
+          {/* Stickers overlay */}
           {stickers.map((sticker) => (
             <motion.div
               key={sticker.id}
