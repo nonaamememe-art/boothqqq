@@ -40,15 +40,9 @@ export default function DownloadPage() {
       
       setResolvedSessionId(actualSessionId);
       
-      // Fetch session data
-      let sessionData;
-      try {
-        const response = await axios.get(`${API}/share/${actualSessionId}`);
-        sessionData = response.data;
-      } catch (e) {
-        const response = await axios.get(`${API}/sessions/${actualSessionId}`);
-        sessionData = response.data;
-      }
+      // Get full session data with photos
+      const response = await axios.get(`${API}/sessions/${actualSessionId}`);
+      const sessionData = response.data;
       
       setSession(sessionData);
       
