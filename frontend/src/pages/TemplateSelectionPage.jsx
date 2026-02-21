@@ -87,30 +87,50 @@ export default function TemplateSelectionPage() {
               }`}
               style={{ width: '320px' }}
             >
-              {/* Template Preview - 2x6 vertical strip */}
-              <div 
-                className="relative rounded p-4"
-                style={{ backgroundColor: template.background_color }}
-              >
-                <div className="flex flex-col gap-2">
-                  {[1, 2, 3, 4].map((num) => (
-                    <div
-                      key={num}
-                      className="rounded overflow-hidden"
-                      style={{ 
-                        aspectRatio: "16/9",
-                        backgroundColor: template.frame_color,
-                        border: '2px solid',
-                        borderColor: template.id === 'modern-dark' ? '#4b5563' : '#d1d5db'
-                      }}
-                    >
-                      <div 
-                        className="w-full h-full"
-                        style={{ backgroundColor: template.id === 'modern-dark' ? '#4b5563' : '#e5e7eb' }}
-                      />
+              {/* Template Preview */}
+              <div className="relative">
+                {template.template_image_url ? (
+                  /* Custom Template Image */
+                  <img 
+                    src={template.template_image_url.startsWith('http') 
+                      ? template.template_image_url 
+                      : `${API.replace('/api', '')}${template.template_image_url}`}
+                    alt={template.name}
+                    className="w-full rounded"
+                    style={{ maxHeight: '450px', objectFit: 'contain' }}
+                  />
+                ) : (
+                  /* Default Color Preview */
+                  <div 
+                    className="rounded p-4"
+                    style={{ backgroundColor: template.background_color }}
+                  >
+                    <div className="flex flex-col gap-2">
+                      {[1, 2, 3, 4].map((num) => (
+                        <div
+                          key={num}
+                          className="rounded overflow-hidden"
+                          style={{ 
+                            aspectRatio: "16/9",
+                            backgroundColor: template.frame_color,
+                            border: '2px dashed',
+                            borderColor: template.id === 'modern-dark' ? '#4b5563' : '#d1d5db'
+                          }}
+                        >
+                          <div 
+                            className="w-full h-full flex items-center justify-center text-2xl"
+                            style={{ 
+                              backgroundColor: template.id === 'modern-dark' ? '#4b5563' : '#e5e7eb',
+                              color: template.id === 'modern-dark' ? '#6b7280' : '#9ca3af'
+                            }}
+                          >
+                            {num}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
                 
                 {selectedTemplate?.id === template.id && (
                   <motion.div
