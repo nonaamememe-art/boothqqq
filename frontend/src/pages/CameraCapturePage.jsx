@@ -135,14 +135,15 @@ export default function CameraCapturePage() {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden paper-bg flex flex-col lg:flex-row">
-      {/* Camera Monitor - Main Area */}
-      <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
+    <div className="h-screen w-screen overflow-hidden paper-bg flex">
+      {/* Left Side - Camera Monitor & Snap Button */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 lg:p-8">
+        {/* Camera Monitor */}
         <div 
           className="relative bg-white overflow-hidden rounded-lg shadow-lg border-4 border-gray-800"
           style={{ 
             width: "100%",
-            maxWidth: "960px",
+            maxWidth: "900px",
             aspectRatio: "16/9"
           }}
           data-testid="camera-view"
@@ -212,29 +213,55 @@ export default function CameraCapturePage() {
             {photos.length}/4 Photos
           </div>
         </div>
+
+        {/* Snap Button - Under Monitor */}
+        <div className="mt-6 lg:mt-8">
+          {photos.length < 4 ? (
+            <Button
+              size="lg"
+              onClick={startCountdown}
+              disabled={!cameraReady || isCapturing}
+              className="btn-sketch py-6 lg:py-8 px-12 lg:px-16 text-2xl lg:text-3xl bg-pink-400 hover:bg-pink-500 text-white"
+              data-testid="capture-btn"
+            >
+              <Camera className="w-8 h-8 lg:w-10 lg:h-10 mr-3" />
+              {isCapturing ? "Wait..." : "Snap!"}
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              onClick={proceedToDecorate}
+              className="btn-sketch py-6 lg:py-8 px-12 lg:px-16 text-2xl lg:text-3xl bg-pink-400 hover:bg-pink-500 text-white"
+              data-testid="proceed-decorate-btn"
+            >
+              <ArrowRight className="w-8 h-8 lg:w-10 lg:h-10 mr-3" />
+              Decorate!
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Right Panel - Preview & Button */}
-      <div className="lg:w-[280px] flex flex-row lg:flex-col p-4 lg:p-6 gap-4 lg:gap-6 bg-[#fef9f3] lg:bg-transparent">
+      {/* Right Panel - Photo Strip Preview (Bigger) */}
+      <div className="w-[320px] lg:w-[380px] flex flex-col p-4 lg:p-6">
         {/* Photo Strip Preview */}
         <div 
-          className="sketch-border p-3 lg:p-4 bg-white"
+          className="sketch-border flex-1 p-4 lg:p-5 bg-white flex flex-col"
           style={{ 
             backgroundColor: template?.background_color || '#ffffff',
           }}
         >
           <h3 
-            className="text-xl lg:text-2xl font-bold text-center text-gray-800 mb-3 lg:mb-4"
+            className="text-2xl lg:text-3xl font-bold text-center text-gray-800 mb-4 lg:mb-5"
             style={{ fontFamily: 'var(--font-heading)' }}
           >
             📸 Your Strip
           </h3>
           
-          <div className="flex flex-col gap-2">
+          <div className="flex-1 flex flex-col gap-3 lg:gap-4">
             {[0, 1, 2, 3].map((index) => (
               <div
                 key={index}
-                className="w-full rounded overflow-hidden border-2 border-dashed"
+                className="flex-1 w-full rounded overflow-hidden border-2 border-dashed"
                 style={{ 
                   aspectRatio: "16/9",
                   borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db',
@@ -246,43 +273,19 @@ export default function CameraCapturePage() {
                   <img src={photos[index]} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-lg lg:text-2xl text-gray-300" style={{ fontFamily: 'var(--font-handwritten)' }}>{index + 1}</span>
+                    <span className="text-2xl lg:text-3xl text-gray-300" style={{ fontFamily: 'var(--font-handwritten)' }}>{index + 1}</span>
                   </div>
                 )}
               </div>
             ))}
           </div>
 
-          <div className="mt-3 lg:mt-4 text-center">
-            <p className="text-xs lg:text-sm font-bold text-pink-400" style={{ fontFamily: 'var(--font-heading)' }}>
+          <div className="mt-4 lg:mt-5 text-center">
+            <p className="text-sm lg:text-base font-bold text-pink-400" style={{ fontFamily: 'var(--font-heading)' }}>
               ✨ Power of Ten ✨
             </p>
           </div>
         </div>
-
-        {/* Action Button */}
-        {photos.length < 4 ? (
-          <Button
-            size="lg"
-            onClick={startCountdown}
-            disabled={!cameraReady || isCapturing}
-            className="btn-sketch py-6 lg:py-8 text-xl lg:text-2xl bg-pink-400 hover:bg-pink-500 text-white w-auto lg:w-full"
-            data-testid="capture-btn"
-          >
-            <Camera className="w-6 h-6 lg:w-8 lg:h-8 mr-2 lg:mr-3" />
-            {isCapturing ? "Wait..." : "Snap!"}
-          </Button>
-        ) : (
-          <Button
-            size="lg"
-            onClick={proceedToDecorate}
-            className="btn-sketch py-6 lg:py-8 text-xl lg:text-2xl bg-pink-400 hover:bg-pink-500 text-white w-auto lg:w-full"
-            data-testid="proceed-decorate-btn"
-          >
-            <ArrowRight className="w-6 h-6 lg:w-8 lg:h-8 mr-2 lg:mr-3" />
-            Decorate!
-          </Button>
-        )}
       </div>
     </div>
   );
