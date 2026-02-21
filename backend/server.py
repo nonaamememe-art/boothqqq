@@ -204,7 +204,7 @@ async def finalize_session(session_id: str, request: FinalizeSessionRequest):
                 img_data = base64.b64decode(photo_data.split(",")[1] if "," in photo_data else photo_data)
                 img = Image.open(BytesIO(img_data))
                 img = img.convert("RGB")
-                img = img.resize((400, 400))
+                img = img.resize((540, 540))  # Half of 1080 for smaller GIF
                 images.append(img)
             
             # Save as GIF
