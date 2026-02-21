@@ -57,8 +57,8 @@ export default function DecorationPage() {
     const newSticker = {
       id: `sticker-${Date.now()}`,
       ...stickerData,
-      x: 150,
-      y: 150,
+      x: 100,
+      y: 100,
       scale: 1.5,
       rotation: 0
     };
@@ -127,9 +127,7 @@ export default function DecorationPage() {
 
       const canvas = await html2canvas(canvasRef.current, {
         backgroundColor: template?.background_color || "#fef9f3",
-        scale: 2,
-        width: 640,
-        height: 1920
+        scale: 2
       });
       const imageData = canvas.toDataURL("image/png");
 
@@ -276,15 +274,14 @@ export default function DecorationPage() {
           </div>
         </div>
 
-        {/* Photo Strip Canvas */}
+        {/* Photo Strip Canvas - 2x6 vertical with 4 photos */}
         <div
           ref={canvasRef}
           className="relative sketch-border"
           style={{
-            width: "280px",
-            minHeight: "700px",
+            width: "240px",
             backgroundColor: template?.background_color || "#fef9f3",
-            padding: "16px"
+            padding: "12px"
           }}
           onClick={(e) => {
             if (e.target === canvasRef.current) {
@@ -293,13 +290,14 @@ export default function DecorationPage() {
           }}
           data-testid="decoration-canvas"
         >
-          {/* Photo Frames */}
-          <div className="flex flex-col gap-3">
+          {/* Photo Frames - 4 photos stacked vertically, 16:9 each */}
+          <div className="flex flex-col gap-2">
             {photos.map((photo, index) => (
               <div
                 key={index}
-                className="aspect-square rounded overflow-hidden border-2"
+                className="rounded overflow-hidden border-2"
                 style={{ 
+                  aspectRatio: "16/9",
                   backgroundColor: template?.frame_color || "#ffffff",
                   borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db',
                 }}
@@ -314,7 +312,7 @@ export default function DecorationPage() {
             ))}
             
             {/* Branding */}
-            <div className="text-center py-3">
+            <div className="text-center py-2">
               <p 
                 className="text-sm font-bold"
                 style={{ 

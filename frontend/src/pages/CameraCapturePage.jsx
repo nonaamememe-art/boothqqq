@@ -79,23 +79,14 @@ export default function CameraCapturePage() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    const size = 1080;
-    canvas.width = size;
-    canvas.height = size;
+    // Capture at 16:9 aspect ratio (1920x1080)
+    canvas.width = 1920;
+    canvas.height = 1080;
 
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
-    const minDimension = Math.min(videoWidth, videoHeight);
-    const sx = (videoWidth - minDimension) / 2;
-    const sy = (videoHeight - minDimension) / 2;
-
+    // Draw video frame (mirrored)
     ctx.save();
     ctx.scale(-1, 1);
-    ctx.drawImage(
-      video,
-      sx, sy, minDimension, minDimension,
-      -size, 0, size, size
-    );
+    ctx.drawImage(video, -1920, 0, 1920, 1080);
     ctx.restore();
 
     const photoData = canvas.toDataURL("image/jpeg", 0.9);
@@ -165,11 +156,11 @@ export default function CameraCapturePage() {
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center gap-8 px-6 pb-6">
-        {/* Camera Monitor - Smaller */}
+        {/* Camera Monitor - 16:9 aspect ratio */}
         <div className="flex-shrink-0">
           <div 
             className="relative rounded-2xl overflow-hidden sketch-border bg-white"
-            style={{ width: "640px", height: "480px" }}
+            style={{ width: "640px", aspectRatio: "16/9" }}
             data-testid="camera-view"
           >
             <video
@@ -245,33 +236,33 @@ export default function CameraCapturePage() {
           </div>
         </div>
 
-        {/* Photo Strip Preview */}
+        {/* Photo Strip Preview - 2x6 vertical with 4 photos stacked */}
         <div className="flex-shrink-0">
           <div 
-            className="sketch-border bg-white p-4"
+            className="sketch-border bg-white p-3"
             style={{ 
               backgroundColor: template?.background_color || '#fef9f3',
-              width: '220px',
+              width: '160px',
               transform: 'rotate(1deg)'
             }}
           >
             <h3 
-              className="text-xl font-bold mb-3 text-center text-gray-800"
+              className="text-lg font-bold mb-2 text-center text-gray-800"
               style={{ fontFamily: 'var(--font-heading)' }}
             >
               Your Strip 📸
             </h3>
             
-            {/* 4 photo slots */}
+            {/* 4 photos stacked vertically - 16:9 aspect ratio each */}
             <div className="flex flex-col gap-2">
               {[0, 1, 2, 3].map((index) => (
                 <div
                   key={index}
-                  className="aspect-square rounded overflow-hidden border-2 border-dashed"
+                  className="rounded overflow-hidden border-2 border-dashed"
                   style={{ 
+                    aspectRatio: "16/9",
                     borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db',
                     backgroundColor: template?.frame_color || '#ffffff',
-                    transform: `rotate(${index % 2 === 0 ? -0.5 : 0.5}deg)`
                   }}
                   data-testid={`photo-preview-${index}`}
                 >
@@ -283,7 +274,7 @@ export default function CameraCapturePage() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                      <span className="text-2xl text-gray-300">{index + 1}</span>
+                      <span className="text-lg text-gray-300">{index + 1}</span>
                     </div>
                   )}
                 </div>
@@ -291,7 +282,7 @@ export default function CameraCapturePage() {
             </div>
 
             {/* Branding */}
-            <div className="mt-3 text-center">
+            <div className="mt-2 text-center">
               <p 
                 className="text-xs font-bold text-gray-400"
                 style={{ fontFamily: 'var(--font-heading)' }}

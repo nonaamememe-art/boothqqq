@@ -120,7 +120,7 @@ export default function TemplateSelectionPage() {
             Pick Your Style! 🎨
           </h2>
 
-          {/* Template Grid */}
+          {/* Template Grid - 2x6 vertical strip preview */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
             {templates.map((template, index) => (
               <motion.div
@@ -140,20 +140,22 @@ export default function TemplateSelectionPage() {
                       : ""
                   }`}
                 >
-                  {/* Template Preview */}
+                  {/* Template Preview - 2x6 vertical strip with 4 photos */}
                   <div 
-                    className="relative aspect-square overflow-hidden rounded"
+                    className="relative overflow-hidden rounded p-3"
                     style={{ backgroundColor: template.background_color }}
                   >
-                    {/* Photo Strip Preview */}
-                    <div className="absolute inset-3 grid grid-cols-2 gap-2">
+                    {/* 4 photos stacked vertically (2x6 paper format) */}
+                    <div className="flex flex-col gap-2">
                       {[1, 2, 3, 4].map((num) => (
                         <div
                           key={num}
                           className="rounded overflow-hidden"
                           style={{ 
+                            aspectRatio: "16/9",
                             backgroundColor: template.frame_color,
-                            border: '2px solid #ddd'
+                            border: '2px solid',
+                            borderColor: template.id === 'modern-dark' ? '#4b5563' : '#d1d5db'
                           }}
                         >
                           <div 
@@ -171,10 +173,10 @@ export default function TemplateSelectionPage() {
                       <motion.div
                         initial={{ scale: 0, rotate: -180 }}
                         animate={{ scale: 1, rotate: 0 }}
-                        className="absolute top-3 right-3 w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center shadow-lg"
+                        className="absolute top-3 right-3 w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center shadow-lg"
                         style={{ border: '3px solid white' }}
                       >
-                        <Check className="w-6 h-6 text-white" />
+                        <Check className="w-5 h-5 text-white" />
                       </motion.div>
                     )}
                   </div>
@@ -209,7 +211,7 @@ export default function TemplateSelectionPage() {
         >
           <Button
             size="lg"
-            className="btn-sketch px-12 py-6 text-xl bg-pink-500 hover:bg-pink-600 text-white"
+            className="btn-sketch px-12 py-6 text-xl bg-pink-400 hover:bg-pink-500 text-white"
             onClick={handleStartSession}
             disabled={!selectedTemplate || loading}
             data-testid="start-session-btn"

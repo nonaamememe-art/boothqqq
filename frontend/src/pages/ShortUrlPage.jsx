@@ -34,9 +34,10 @@ export default function ShortUrlPage() {
       const sessionPhotos = sessionRes.data.photos || [];
       setPhotos(sessionPhotos);
       
-      // Build media array
+      // Build media array: 4 photos + photo strip + video
       const mediaItems = [];
       
+      // Add 4 individual photos
       sessionPhotos.forEach((photo, idx) => {
         mediaItems.push({
           type: 'photo',
@@ -45,6 +46,7 @@ export default function ShortUrlPage() {
         });
       });
       
+      // Add photo strip (5th item)
       if (sessionRes.data.final_image_url) {
         mediaItems.push({
           type: 'strip',
@@ -53,6 +55,7 @@ export default function ShortUrlPage() {
         });
       }
       
+      // Add video (6th item) - MP4 format
       if (sessionRes.data.video_url) {
         mediaItems.push({
           type: 'video',
@@ -91,6 +94,7 @@ export default function ShortUrlPage() {
     } else if (currentMedia.type === 'strip') {
       window.open(`${API.replace('/api', '')}/api/download/${session.fullId}/image`, '_blank');
     } else {
+      // For individual photos, create download
       const link = document.createElement('a');
       link.href = currentMedia.src;
       link.download = `photo-${currentIndex + 1}.jpg`;
@@ -181,97 +185,126 @@ export default function ShortUrlPage() {
       {/* Main Preview Area */}
       <main className="flex-1 flex items-center justify-center relative px-4">
         {/* Previous Button */}
-        <button
-          onClick={handlePrev}
-          className="absolute left-4 z-10 p-2 text-gray-400 hover:text-pink-500 transition-colors"
-          data-testid="prev-btn"
-        >
-          <ChevronLeft className="w-12 h-12" />
-        </button>
+        {allMedia.length > 1 && (
+          <button
+            onClick={handlePrev}
+            className="absolute left-4 z-10 p-2 text-gray-400 hover:text-pink-500 transition-colors"
+            data-testid="prev-btn"
+          >
+            <ChevronLeft className="w-12 h-12" />
+          </button>
+        )}
 
         {/* Current Media Display */}
         <AnimatePresence mode="wait">
-          <motion.div
-            key={currentIndex}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="relative max-w-4xl max-h-[65vh] flex items-center justify-center"
-          >
-            <div className="sketch-border bg-white p-3">
-              {currentMedia?.type === 'video' ? (
-                <video
-                  src={currentMedia.src}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  controls
-                  className="max-w-full max-h-[60vh] rounded"
-                  data-testid="video-preview"
-                />
-              ) : (
-                <img
-                  src={currentMedia?.src}
-                  alt={currentMedia?.label}
-                  className="max-w-full max-h-[60vh] object-contain rounded"
-                  data-testid="image-preview"
-                />
-              )}
-            </div>
-
-            {/* Photo Counter */}
-            <div 
-              className="absolute top-6 right-6 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-gray-600 text-sm sketch-border-light"
-              style={{ fontFamily: 'var(--font-handwritten)' }}
+          {currentMedia && (
+            <motion.div
+              key={currentIndex}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="relative flex items-center justify-center"
+              style={{ maxWidth: '80vw', maxHeight: '65vh' }}
             >
-              {currentIndex + 1}/{allMedia.length}
-            </div>
-          </motion.div>
+              <div className="sketch-border bg-white p-3">
+                {currentMedia.type === 'video' ? (
+                  <video
+                    src={currentMedia.src}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                    className="max-h-[60vh] rounded"
+                    style={{ maxWidth: '100%' }}
+                    data-testid="video-preview"
+                  />
+                ) : currentMedia.type === 'strip' ? (
+                  <img
+                    src={currentMedia.src}
+                    alt={currentMedia.label}
+                    className="max-h-[60vh] object-contain rounded"
+                    style={{ maxWidth: '300px' }}
+                    data-testid="strip-preview"
+                  />
+                ) : (
+                  <img
+                    src={currentMedia.src}
+                    alt={currentMedia.label}
+                    className="max-h-[60vh] object-contain rounded"
+                    style={{ maxWidth: '100%' }}
+                    data-testid="image-preview"
+                  />
+                )}
+              </div>
+
+              {/* Photo Counter */}
+              <div 
+                className="absolute top-6 right-6 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-gray-600 text-sm sketch-border-light"
+                style={{ fontFamily: 'var(--font-handwritten)' }}
+              >
+                {currentIndex + 1}/{allMedia.length}
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Next Button */}
-        <button
-          onClick={handleNext}
-          className="absolute right-4 z-10 p-2 text-gray-400 hover:text-pink-500 transition-colors"
-          data-testid="next-btn"
-        >
-          <ChevronRight className="w-12 h-12" />
-        </button>
+        {allMedia.length > 1 && (
+          <button
+            onClick={handleNext}
+            className="absolute right-4 z-10 p-2 text-gray-400 hover:text-pink-500 transition-colors"
+            data-testid="next-btn"
+          >
+            <ChevronRight className="w-12 h-12" />
+          </button>
+        )}
       </main>
 
       {/* Thumbnail Gallery */}
-      <div className="py-6 px-4 border-t-2 border-dashed border-gray-300">
-        <div className="flex items-center justify-center gap-3 overflow-x-auto">
-          {allMedia.map((media, index) => (
-            <motion.button
-              key={index}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleThumbnailClick(index)}
-              className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                index === currentIndex
-                  ? 'border-pink-400 shadow-lg'
-                  : 'border-gray-200 opacity-60 hover:opacity-100 hover:border-pink-300'
-              }`}
-              data-testid={`thumbnail-${index}`}
-            >
-              {media.type === 'video' ? (
-                <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                  <span className="text-2xl">🎬</span>
-                </div>
-              ) : (
-                <img
-                  src={media.src}
-                  alt={media.label}
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </motion.button>
-          ))}
+      {allMedia.length > 0 && (
+        <div className="py-6 px-4 border-t-2 border-dashed border-gray-300">
+          <div className="flex items-center justify-center gap-3 overflow-x-auto">
+            {allMedia.map((media, index) => (
+              <motion.button
+                key={index}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleThumbnailClick(index)}
+                className={`flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
+                  index === currentIndex
+                    ? 'border-pink-400 shadow-lg'
+                    : 'border-gray-200 opacity-60 hover:opacity-100 hover:border-pink-300'
+                }`}
+                style={{
+                  width: media.type === 'strip' ? '40px' : '80px',
+                  height: '80px'
+                }}
+                data-testid={`thumbnail-${index}`}
+              >
+                {media.type === 'video' ? (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                    <span className="text-2xl">🎬</span>
+                  </div>
+                ) : media.type === 'strip' ? (
+                  <img
+                    src={media.src}
+                    alt={media.label}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <img
+                    src={media.src}
+                    alt={media.label}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </motion.button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
