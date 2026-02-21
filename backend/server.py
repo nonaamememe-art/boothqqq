@@ -248,7 +248,7 @@ async def finalize_session(session_id: str, request: FinalizeSessionRequest):
         "success": True,
         "session_id": session_id,
         "download_url": f"/api/download/{session_id}/image",
-        "gif_url": f"/api/download/{session_id}/gif"
+        "video_url": f"/api/download/{session_id}/video"
     }
 
 @api_router.get("/download/{session_id}/image")
@@ -259,13 +259,13 @@ async def download_image(session_id: str):
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(file_path, media_type="image/png", filename=f"power-of-ten-{session_id}.png")
 
-@api_router.get("/download/{session_id}/gif")
-async def download_gif(session_id: str):
-    """Download the GIF"""
-    file_path = UPLOADS_DIR / f"{session_id}.gif"
+@api_router.get("/download/{session_id}/video")
+async def download_video(session_id: str):
+    """Download the video"""
+    file_path = UPLOADS_DIR / f"{session_id}.mp4"
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="GIF not found")
-    return FileResponse(file_path, media_type="image/gif", filename=f"power-of-ten-{session_id}.gif")
+        raise HTTPException(status_code=404, detail="Video not found")
+    return FileResponse(file_path, media_type="video/mp4", filename=f"power-of-ten-{session_id}.mp4")
 
 @api_router.get("/qrcode/{session_id}")
 async def generate_qrcode(session_id: str):
