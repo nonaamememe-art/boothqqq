@@ -259,9 +259,11 @@ async def generate_qrcode(session_id: str):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
-    # Get frontend URL from environment or use default
-    frontend_url = os.environ.get('FRONTEND_URL', os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(',')[0])
-    download_url = f"{frontend_url}/download/{session_id}"
+    # Get share URL from environment - configurable for custom domain
+    share_base_url = os.environ.get('SHARE_BASE_URL', 'https://fotoshare.co/i')
+    # Generate short ID from session_id (first 8 chars)
+    short_id = session_id[:8]
+    download_url = f"{share_base_url}/{short_id}"
     
     # Generate QR code
     qr = qrcode.QRCode(
@@ -282,19 +284,40 @@ async def generate_qrcode(session_id: str):
 
 @api_router.get("/share/{session_id}")
 async def get_share_data(session_id: str):
-    """Get shareable data for a session"""
+    """Get shareable data for a session - supports both full ID and short ID"""
+    # Try full ID first
     session = await db.sessions.find_one({"id": session_id}, {"_id": 0})
+    
+    # If not found, try matching by short ID (first 8 chars)
+    if not session:
+        # Search for session starting with this short ID
+        session = await db.sessions.find_one(
+            {"id": {"$regex": f"^{session_id}"}}, 
+            {"_id": 0}
+        )
+    
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
     return {
-        "session_id": session_id,
+        "session_id": session.get("id"),
         "status": session.get("status"),
         "template_id": session.get("template_id"),
         "photo_count": len(session.get("photos", [])),
         "has_gif": session.get("gif_url") is not None,
         "has_image": session.get("final_image_url") is not None
     }
+
+@api_router.get("/resolve/{short_id}")
+async def resolve_short_id(short_id: str):
+    """Resolve short ID to full session ID"""
+    session = await db.sessions.find_one(
+        {"id": {"$regex": f"^{short_id}"}}, 
+        {"_id": 0, "id": 1}
+    )
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"session_id": session.get("id")}
 
 # Include the router in the main app
 app.include_router(api_router)
