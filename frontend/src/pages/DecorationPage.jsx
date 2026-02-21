@@ -169,15 +169,15 @@ export default function DecorationPage() {
         </div>
       </div>
 
-      {/* Photo Strip Canvas */}
+      {/* Photo Strip Canvas - BIGGER */}
       <div className="flex-1 flex items-center justify-center">
         <div
           ref={canvasRef}
           className="relative sketch-border"
-          style={{ width: "320px", backgroundColor: template?.background_color || "#fef9f3", padding: "16px" }}
+          style={{ width: "400px", backgroundColor: template?.background_color || "#fef9f3", padding: "20px" }}
           onClick={(e) => { if (e.target === canvasRef.current) setSelectedSticker(null); }}
         >
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             {photos.map((photo, index) => (
               <div
                 key={index}
