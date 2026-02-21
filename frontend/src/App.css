@@ -1,34 +1,185 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* Power of Ten - Photobooth App Styles */
+
+/* Page transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.page-exit {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.App-link {
-    color: #61dafb;
+.page-exit-active {
+  opacity: 0;
+  transform: translateY(-20px);
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Template card hover effects */
+.template-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.template-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+}
+
+.template-card.selected {
+  ring: 3px;
+  ring-color: hsl(var(--primary));
+}
+
+/* Camera view */
+.camera-container {
+  position: relative;
+  width: 100%;
+  max-width: 1920px;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Countdown overlay */
+.countdown-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 50;
+}
+
+.countdown-text {
+  font-size: clamp(8rem, 20vw, 15rem);
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 0 60px rgba(255, 255, 255, 0.5);
+}
+
+/* Decoration canvas */
+.decoration-canvas {
+  position: relative;
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Sticker item */
+.sticker-item {
+  position: absolute;
+  cursor: move;
+  transition: transform 0.15s ease;
+}
+
+.sticker-item:hover {
+  transform: scale(1.05);
+}
+
+.sticker-item.selected {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 4px;
+}
+
+/* Sticker palette */
+.sticker-palette {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+}
+
+.sticker-palette-item {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  padding: 8px;
+  border-radius: 12px;
+  background: hsl(var(--secondary));
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.sticker-palette-item:hover {
+  background: hsl(var(--secondary) / 0.8);
+  transform: scale(1.08);
+}
+
+/* Result page */
+.qr-container {
+  padding: 24px;
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Photo strip preview */
+.photo-strip-preview {
+  width: 100%;
+  max-width: 200px;
+  background: white;
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.photo-strip-preview .photo-frame {
+  aspect-ratio: 1;
+  background: hsl(var(--secondary));
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.photo-strip-preview .photo-frame + .photo-frame {
+  margin-top: 8px;
+}
+
+/* Progress steps */
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.progress-step.active {
+  background: hsl(var(--primary));
+  color: white;
+}
+
+.progress-step.completed {
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+}
+
+.progress-step.pending {
+  background: hsl(var(--secondary));
+  color: hsl(var(--muted-foreground));
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .countdown-text {
+    font-size: 6rem;
+  }
+  
+  .sticker-palette-item {
+    width: 52px;
+    height: 52px;
+  }
 }
