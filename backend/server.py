@@ -213,18 +213,12 @@ async def finalize_session(session_id: str, request: FinalizeSessionRequest):
                 img = Image.open(BytesIO(img_data))
                 img = img.convert("RGB")
                 
-                # Create 1920x1080 frame with photo centered
-                frame = Image.new("RGB", (1920, 1080), (20, 20, 20))
-                # Resize photo to fit in frame (centered square)
-                photo_size = 1000
-                img_resized = img.resize((photo_size, photo_size), Image.Resampling.LANCZOS)
-                x_offset = (1920 - photo_size) // 2
-                y_offset = (1080 - photo_size) // 2
-                frame.paste(img_resized, (x_offset, y_offset))
+                # Resize photo to 1920x1080 (16:9)
+                img_resized = img.resize((1920, 1080), Image.Resampling.LANCZOS)
                 
                 # Add frame multiple times for duration (1 second per photo at 30fps)
                 import numpy as np
-                frame_array = np.array(frame)
+                frame_array = np.array(img_resized)
                 for _ in range(30):  # 30 frames = 1 second
                     frames.append(frame_array)
             
