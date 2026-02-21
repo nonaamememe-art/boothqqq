@@ -259,7 +259,8 @@ class PhotoboothAPITester:
             print(f"\n❌ Failed Tests:")
             for result in self.test_results:
                 if not result['success']:
-                    print(f"   - {result['name']}: {result.get('error', f'Status {result[\"actual_status\"]}')} ")
+                    error_msg = result.get('error', f"Status {result['actual_status']}")
+                    print(f"   - {result['name']}: {error_msg}")
         
         return self.tests_passed == self.tests_run
 
