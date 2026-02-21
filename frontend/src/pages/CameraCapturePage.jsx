@@ -135,12 +135,16 @@ export default function CameraCapturePage() {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden paper-bg flex">
+    <div className="h-screen w-screen overflow-hidden paper-bg flex flex-col lg:flex-row">
       {/* Camera Monitor - Main Area */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
         <div 
-          className="relative sketch-border bg-white overflow-hidden"
-          style={{ width: "1280px", height: "720px" }}
+          className="relative bg-white overflow-hidden rounded-lg shadow-lg border-4 border-gray-800"
+          style={{ 
+            width: "100%",
+            maxWidth: "960px",
+            aspectRatio: "16/9"
+          }}
           data-testid="camera-view"
         >
           <video
@@ -156,12 +160,12 @@ export default function CameraCapturePage() {
           {cameraError && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
               <div className="text-center">
-                <div className="text-8xl mb-6">📷</div>
-                <p className="text-2xl text-gray-600 mb-6" style={{ fontFamily: 'var(--font-handwritten)' }}>
+                <div className="text-6xl lg:text-8xl mb-4 lg:mb-6">📷</div>
+                <p className="text-xl lg:text-2xl text-gray-600 mb-4 lg:mb-6" style={{ fontFamily: 'var(--font-handwritten)' }}>
                   {cameraError}
                 </p>
                 <Button 
-                  className="btn-sketch bg-pink-400 hover:bg-pink-500 text-white text-xl px-8 py-4"
+                  className="btn-sketch bg-pink-400 hover:bg-pink-500 text-white text-lg lg:text-xl px-6 lg:px-8 py-3 lg:py-4"
                   onClick={initCamera}
                 >
                   Try Again
@@ -173,8 +177,8 @@ export default function CameraCapturePage() {
           {!cameraReady && !cameraError && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
               <div className="text-center">
-                <div className="w-16 h-16 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-6" />
-                <p className="text-2xl text-gray-500" style={{ fontFamily: 'var(--font-handwritten)' }}>
+                <div className="w-12 h-12 lg:w-16 lg:h-16 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-4 lg:mb-6" />
+                <p className="text-xl lg:text-2xl text-gray-500" style={{ fontFamily: 'var(--font-handwritten)' }}>
                   Getting camera ready...
                 </p>
               </div>
@@ -194,8 +198,8 @@ export default function CameraCapturePage() {
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 1.5, opacity: 0 }}
-                  className="text-[20rem] font-bold text-white"
-                  style={{ textShadow: '0 0 100px rgba(255,255,255,0.5)' }}
+                  className="text-[10rem] lg:text-[16rem] font-bold text-white"
+                  style={{ textShadow: '0 0 80px rgba(255,255,255,0.5)' }}
                 >
                   {countdown}
                 </motion.span>
@@ -204,51 +208,54 @@ export default function CameraCapturePage() {
           </AnimatePresence>
 
           {/* Photo count */}
-          <div className="absolute top-6 left-6 px-6 py-3 bg-white/90 backdrop-blur rounded-full text-xl font-bold text-gray-800">
+          <div className="absolute top-4 left-4 lg:top-6 lg:left-6 px-4 py-2 lg:px-6 lg:py-3 bg-white/90 backdrop-blur rounded-full text-lg lg:text-xl font-bold text-gray-800">
             {photos.length}/4 Photos
           </div>
         </div>
       </div>
 
       {/* Right Panel - Preview & Button */}
-      <div className="w-80 flex flex-col p-6 gap-6">
+      <div className="lg:w-[320px] flex flex-row lg:flex-col p-4 lg:p-6 gap-4 lg:gap-6 bg-[#fef9f3] lg:bg-transparent">
         {/* Photo Strip Preview */}
         <div 
-          className="sketch-border flex-1 p-4"
-          style={{ backgroundColor: template?.background_color || '#fef9f3' }}
+          className="sketch-border flex-1 lg:flex-1 p-3 lg:p-4 bg-white"
+          style={{ 
+            backgroundColor: template?.background_color || '#ffffff',
+            transform: 'rotate(0deg)'
+          }}
         >
           <h3 
-            className="text-2xl font-bold text-center text-gray-800 mb-4"
+            className="text-xl lg:text-2xl font-bold text-center text-gray-800 mb-3 lg:mb-4"
             style={{ fontFamily: 'var(--font-heading)' }}
           >
             📸 Your Strip
           </h3>
           
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-row lg:flex-col gap-2 lg:gap-3">
             {[0, 1, 2, 3].map((index) => (
               <div
                 key={index}
-                className="rounded overflow-hidden border-2 border-dashed"
+                className="flex-1 lg:flex-none rounded overflow-hidden border-2 border-dashed"
                 style={{ 
                   aspectRatio: "16/9",
                   borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db',
-                  backgroundColor: template?.frame_color || '#ffffff',
+                  backgroundColor: template?.frame_color || '#f3f4f6',
                 }}
                 data-testid={`photo-preview-${index}`}
               >
                 {photos[index] ? (
                   <img src={photos[index]} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                    <span className="text-2xl text-gray-300">{index + 1}</span>
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-lg lg:text-2xl text-gray-300" style={{ fontFamily: 'var(--font-handwritten)' }}>{index + 1}</span>
                   </div>
                 )}
               </div>
             ))}
           </div>
 
-          <div className="mt-4 text-center">
-            <p className="text-sm font-bold text-gray-400" style={{ fontFamily: 'var(--font-heading)' }}>
+          <div className="mt-3 lg:mt-4 text-center">
+            <p className="text-xs lg:text-sm font-bold text-pink-400" style={{ fontFamily: 'var(--font-heading)' }}>
               ✨ Power of Ten ✨
             </p>
           </div>
@@ -260,20 +267,20 @@ export default function CameraCapturePage() {
             size="lg"
             onClick={startCountdown}
             disabled={!cameraReady || isCapturing}
-            className="btn-sketch py-8 text-2xl bg-pink-400 hover:bg-pink-500 text-white"
+            className="btn-sketch py-6 lg:py-8 text-xl lg:text-2xl bg-pink-400 hover:bg-pink-500 text-white w-auto lg:w-full"
             data-testid="capture-btn"
           >
-            <Camera className="w-8 h-8 mr-3" />
+            <Camera className="w-6 h-6 lg:w-8 lg:h-8 mr-2 lg:mr-3" />
             {isCapturing ? "Wait..." : "Snap!"}
           </Button>
         ) : (
           <Button
             size="lg"
             onClick={proceedToDecorate}
-            className="btn-sketch py-8 text-2xl bg-pink-400 hover:bg-pink-500 text-white"
+            className="btn-sketch py-6 lg:py-8 text-xl lg:text-2xl bg-pink-400 hover:bg-pink-500 text-white w-auto lg:w-full"
             data-testid="proceed-decorate-btn"
           >
-            <ArrowRight className="w-8 h-8 mr-3" />
+            <ArrowRight className="w-6 h-6 lg:w-8 lg:h-8 mr-2 lg:mr-3" />
             Decorate!
           </Button>
         )}
