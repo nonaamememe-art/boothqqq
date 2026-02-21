@@ -2,13 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Download, Share2, RefreshCw, Home, QrCode, Image, Film } from "lucide-react";
+import { Download, Share2, RefreshCw, Home, ImageIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const FRONTEND_URL = window.location.origin;
 
 export default function ResultPage() {
   const navigate = useNavigate();
@@ -17,6 +15,7 @@ export default function ResultPage() {
   const [session, setSession] = useState(null);
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [shortUrl, setShortUrl] = useState('');
 
   useEffect(() => {
     fetchSession();
@@ -27,6 +26,11 @@ export default function ResultPage() {
     try {
       const response = await axios.get(`${API}/sessions/${sessionId}`);
       setSession(response.data);
+      
+      // Get the short URL
+      const shareRes = await axios.get(`${API}/share/${sessionId}`);
+      const baseUrl = window.location.origin;
+      setShortUrl(`${baseUrl}/i/${shareRes.data.short_id}`);
     } catch (error) {
       console.error("Error fetching session:", error);
       toast.error("Failed to load session");
@@ -60,28 +64,26 @@ export default function ResultPage() {
   };
 
   const handleShare = async () => {
-    const shareUrl = `${FRONTEND_URL}/download/${sessionId}`;
-    
     if (navigator.share) {
       try {
         await navigator.share({
           title: 'My Power of Ten Photo Strip',
           text: 'Check out my photo strip!',
-          url: shareUrl
+          url: shortUrl
         });
       } catch (error) {
         if (error.name !== 'AbortError') {
-          copyToClipboard(shareUrl);
+          copyToClipboard(shortUrl);
         }
       }
     } else {
-      copyToClipboard(shareUrl);
+      copyToClipboard(shortUrl);
     }
   };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    toast.success("Link copied to clipboard!");
+    toast.success("Link copied!");
   };
 
   const startNewSession = () => {
@@ -90,96 +92,116 @@ export default function ResultPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <div className="min-h-screen flex items-center justify-center paper-bg">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-600">Loading your photos...</p>
+          <div className="w-16 h-16 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-lg" style={{ fontFamily: 'var(--font-handwritten)' }}>Loading your masterpiece...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div className="min-h-screen paper-bg">
       {/* Header */}
       <header className="py-6 px-6 flex items-center justify-between">
         <h1 
-          className="text-2xl font-bold text-slate-900"
+          className="text-3xl font-bold text-gray-800"
           style={{ fontFamily: 'var(--font-heading)' }}
           data-testid="result-title"
         >
-          Power of Ten
+          🎉 All Done!
         </h1>
         <Button
           variant="outline"
           onClick={startNewSession}
+          className="btn-sketch bg-white hover:bg-gray-50"
           data-testid="new-session-btn"
         >
           <Home className="w-4 h-4 mr-2" />
-          New Session
+          New Photos
         </Button>
       </header>
 
       {/* Main Content */}
       <main className="px-6 pb-24">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           {/* Success Message */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-12"
+            initial={{ opacity: 0, y: 20, rotate: -2 }}
+            animate={{ opacity: 1, y: 0, rotate: 0 }}
+            className="text-center mb-8"
           >
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+            <div 
+              className="w-24 h-24 sketch-border bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{ transform: 'rotate(-3deg)' }}
+            >
+              <span className="text-5xl">✨</span>
             </div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">
+            <h2 
+              className="text-4xl font-bold text-gray-800 mb-2"
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
               Your Photo Strip is Ready!
             </h2>
-            <p className="text-slate-600">
-              Scan the QR code or use the buttons below to download
+            <p 
+              className="text-gray-600"
+              style={{ fontFamily: 'var(--font-handwritten)' }}
+            >
+              Scan the QR code or tap to download
             </p>
           </motion.div>
 
           {/* Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* QR Code Section */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <Card className="overflow-hidden">
-                <CardContent className="p-8">
-                  <div className="flex items-center gap-2 mb-6">
-                    <QrCode className="w-5 h-5 text-blue-600" />
-                    <h3 className="text-lg font-semibold text-slate-800">Scan to Download</h3>
-                  </div>
-                  
-                  <div 
-                    className="qr-container aspect-square max-w-xs mx-auto flex items-center justify-center"
-                    data-testid="qr-code-container"
-                  >
-                    {qrCodeUrl ? (
-                      <img
-                        src={qrCodeUrl}
-                        alt="QR Code"
-                        className="w-full h-full"
-                        data-testid="qr-code-image"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-                      </div>
-                    )}
-                  </div>
+              <div className="sketch-border bg-white p-6" style={{ transform: 'rotate(-1deg)' }}>
+                <h3 
+                  className="text-xl font-bold text-center mb-4 text-gray-800"
+                  style={{ fontFamily: 'var(--font-heading)' }}
+                >
+                  📱 Scan Me!
+                </h3>
+                
+                <div 
+                  className="aspect-square max-w-xs mx-auto bg-white p-4 border-2 border-dashed border-gray-300 rounded-lg"
+                  data-testid="qr-code-container"
+                >
+                  {qrCodeUrl ? (
+                    <img
+                      src={qrCodeUrl}
+                      alt="QR Code"
+                      className="w-full h-full"
+                      data-testid="qr-code-image"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="w-8 h-8 border-4 border-pink-400 border-dashed rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
 
-                  <p className="text-center text-sm text-slate-500 mt-4">
-                    Point your phone camera at this QR code to access the download page
-                  </p>
-                </CardContent>
-              </Card>
+                <p 
+                  className="text-center text-sm text-gray-500 mt-4"
+                  style={{ fontFamily: 'var(--font-handwritten)' }}
+                >
+                  Point your camera at this QR code!
+                </p>
+                
+                {/* Short URL display */}
+                {shortUrl && (
+                  <div className="mt-4 p-2 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                    <p className="text-xs text-gray-500 text-center break-all" style={{ fontFamily: 'var(--font-handwritten)' }}>
+                      {shortUrl}
+                    </p>
+                  </div>
+                )}
+              </div>
             </motion.div>
 
             {/* Download Options */}
@@ -190,81 +212,99 @@ export default function ResultPage() {
               className="space-y-4"
             >
               {/* Photo Strip Download */}
-              <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Image className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-slate-800">Photo Strip</h4>
-                      <p className="text-sm text-slate-500 mb-3">
-                        High-quality PNG image with all decorations
-                      </p>
-                      <Button
-                        onClick={handleDownloadImage}
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                        data-testid="download-image-btn"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download Image
-                      </Button>
-                    </div>
+              <div className="sketch-border bg-white p-4" style={{ transform: 'rotate(1deg)' }}>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-pink-100 rounded-lg flex items-center justify-center border-2 border-dashed border-pink-300">
+                    <ImageIcon className="w-7 h-7 text-pink-500" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex-1">
+                    <h4 
+                      className="text-lg font-bold text-gray-800"
+                      style={{ fontFamily: 'var(--font-heading)' }}
+                    >
+                      Photo Strip
+                    </h4>
+                    <p 
+                      className="text-sm text-gray-500"
+                      style={{ fontFamily: 'var(--font-handwritten)' }}
+                    >
+                      High quality PNG image
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleDownloadImage}
+                  className="w-full mt-3 btn-sketch bg-pink-500 hover:bg-pink-600 text-white"
+                  data-testid="download-image-btn"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+              </div>
 
               {/* GIF Download */}
-              <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Film className="w-6 h-6 text-purple-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-slate-800">Animated GIF</h4>
-                      <p className="text-sm text-slate-500 mb-3">
-                        Your 4 photos as an animated slideshow
-                      </p>
-                      <Button
-                        variant="outline"
-                        onClick={handleDownloadGif}
-                        className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
-                        data-testid="download-gif-btn"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download GIF
-                      </Button>
-                    </div>
+              <div className="sketch-border bg-white p-4" style={{ transform: 'rotate(-1deg)' }}>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center border-2 border-dashed border-purple-300">
+                    <Sparkles className="w-7 h-7 text-purple-500" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex-1">
+                    <h4 
+                      className="text-lg font-bold text-gray-800"
+                      style={{ fontFamily: 'var(--font-heading)' }}
+                    >
+                      Animated GIF
+                    </h4>
+                    <p 
+                      className="text-sm text-gray-500"
+                      style={{ fontFamily: 'var(--font-handwritten)' }}
+                    >
+                      Your photos as a slideshow
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadGif}
+                  className="w-full mt-3 btn-sketch border-purple-300 text-purple-600 hover:bg-purple-50"
+                  data-testid="download-gif-btn"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download GIF
+                </Button>
+              </div>
 
               {/* Share Button */}
-              <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Share2 className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-slate-800">Share Link</h4>
-                      <p className="text-sm text-slate-500 mb-3">
-                        Copy or share the download link with friends
-                      </p>
-                      <Button
-                        variant="outline"
-                        onClick={handleShare}
-                        className="w-full border-green-300 text-green-700 hover:bg-green-50"
-                        data-testid="share-btn"
-                      >
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Share Link
-                      </Button>
-                    </div>
+              <div className="sketch-border bg-white p-4" style={{ transform: 'rotate(0.5deg)' }}>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-green-100 rounded-lg flex items-center justify-center border-2 border-dashed border-green-300">
+                    <Share2 className="w-7 h-7 text-green-500" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex-1">
+                    <h4 
+                      className="text-lg font-bold text-gray-800"
+                      style={{ fontFamily: 'var(--font-heading)' }}
+                    >
+                      Share Link
+                    </h4>
+                    <p 
+                      className="text-sm text-gray-500"
+                      style={{ fontFamily: 'var(--font-handwritten)' }}
+                    >
+                      Send to friends!
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleShare}
+                  className="w-full mt-3 btn-sketch border-green-300 text-green-600 hover:bg-green-50"
+                  data-testid="share-btn"
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Copy Link
+                </Button>
+              </div>
             </motion.div>
           </div>
 
@@ -278,11 +318,11 @@ export default function ResultPage() {
             <Button
               size="lg"
               onClick={startNewSession}
-              className="px-12 py-6 text-lg rounded-full bg-slate-900 hover:bg-slate-800"
+              className="btn-sketch px-10 py-6 text-xl bg-gray-800 hover:bg-gray-700 text-white"
               data-testid="start-new-btn"
             >
               <RefreshCw className="w-5 h-5 mr-2" />
-              Start New Photo Session
+              Take More Photos!
             </Button>
           </motion.div>
         </div>
