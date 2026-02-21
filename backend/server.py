@@ -125,6 +125,10 @@ async def root():
 @api_router.get("/templates", response_model=List[dict])
 async def get_templates():
     """Get available photo strip templates"""
+    # Check for custom templates in database
+    custom_templates = await db.templates.find({}, {"_id": 0}).to_list(100)
+    if custom_templates:
+        return custom_templates
     return TEMPLATES
 
 @api_router.get("/stickers", response_model=List[dict])
