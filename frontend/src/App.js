@@ -7,6 +7,7 @@ import DecorationPage from "@/pages/DecorationPage";
 import ResultPage from "@/pages/ResultPage";
 import DownloadPage from "@/pages/DownloadPage";
 import ShortUrlPage from "@/pages/ShortUrlPage";
+import AdminPage from "@/pages/AdminPage";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Route path="/download/:sessionId" element={<DownloadPage />} />
           <Route path="/i/:shortId" element={<ShortUrlPage />} />
           <Route path="/d/:shortId" element={<DownloadPage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-center" />
