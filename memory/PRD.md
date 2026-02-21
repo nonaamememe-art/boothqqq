@@ -1,75 +1,100 @@
-# Power of Ten - Photobooth App PRD
+# Power of Ten - Photobooth Application
 
-## Original Problem Statement
-Build an interactive photobooth app with filters, decorative stickers, and print-ready photo strips. The app needs:
-1. Template selection page (2 templates, 4-picture 2x6 paper format)
-2. Camera/monitor page (1920x1080) with 3-second countdown and auto-capture
-3. Decoration page with stickers
-4. QR code generation for download page
-5. GIF creation from 4 photos arranged together
+## Product Overview
+An interactive photobooth web application for capturing, decorating, and sharing photo strips.
 
-App name: **Power of Ten**
+## Core Requirements
 
-## User Personas
-- **Event Attendees**: People at parties, weddings, corporate events who want fun photo memories
-- **Event Organizers**: Those setting up photobooth stations at venues
-- **Social Media Users**: People who want shareable photo content
+### Pages & Flow
+1. **Template Selection Page** - Choose between photo strip templates (Classic White, Modern Dark)
+2. **Camera Page** - 1920x1080 display with 3-second countdown, captures 4 photos (16:9 aspect ratio)
+3. **Decoration Page** - Add stickers to captured photos
+4. **Result Page** - Display QR code for sharing
+5. **QR Download Page** - Mobile-friendly gallery with download/share options
 
-## Core Requirements (Static)
-- [x] 2 photo strip templates (Classic White, Modern Dark)
-- [x] 4-picture vertical layout (2x6 paper aspect ratio)
-- [x] 3-second countdown timer for photo capture
-- [x] 8 placeholder stickers for decoration
-- [x] Drag-and-drop sticker placement
-- [x] Sticker resize and rotation controls
-- [x] QR code generation linking to download page
-- [x] GIF creation from 4 photos
-- [x] Public download page
+### Design System
+- **Art Style**: Drawing/sketchy aesthetic
+- **Colors**: Cream (#fef9f3) and pink (#f9a8d4) palette
+- **Fonts**: Handwritten style (Gochi Hand)
+- **Borders**: Sketch-style with slight rotation effect
 
-## What's Been Implemented (February 21, 2026)
+### Technical Specs
+- Photo aspect ratio: 16:9
+- Photo strip layout: 2x6 vertical format
+- Output format: MP4 video (not GIF)
+- Short URL format: domain.com/d/short_id
 
-### Phase 1 - MVP Complete
-- **Template Selection Page**: Choose between Classic White and Modern Dark themes
-- **Camera Capture Page**: Webcam integration with 3-sec countdown, auto-capture mode
-- **Decoration Page**: Add/edit stickers with size and rotation controls
-- **Result Page**: QR code display, download buttons for image and GIF
-- **Download Page**: Public shareable page for downloading photos
+## Architecture
 
-### Technical Implementation
-- **Backend**: FastAPI with MongoDB storage
-- **Frontend**: React with Framer Motion animations
-- **APIs**: 
-  - GET /api/templates - Returns 2 templates
-  - GET /api/stickers - Returns 8 placeholder stickers
-  - POST /api/sessions - Create photo session
-  - GET /api/sessions/{id} - Get session details
-  - POST /api/sessions/{id}/photos - Add photo to session
-  - POST /api/sessions/{id}/stickers - Update stickers
-  - POST /api/sessions/{id}/finalize - Generate final image and GIF
-  - GET /api/qrcode/{id} - Generate QR code
-  - GET /api/download/{id}/image - Download photo strip
-  - GET /api/download/{id}/gif - Download animated GIF
+```
+/app/
+├── backend/
+│   ├── server.py        # FastAPI - sessions, uploads, video generation
+│   └── requirements.txt
+└── frontend/
+    └── src/
+        ├── pages/
+        │   ├── TemplateSelectionPage.jsx
+        │   ├── CameraCapturePage.jsx
+        │   ├── DecorationPage.jsx
+        │   ├── ResultPage.jsx
+        │   ├── DownloadPage.jsx      # /d/:shortId route
+        │   └── ShortUrlPage.jsx      # /i/:shortId route
+        └── index.css    # Global styles, theme
+```
 
-## Prioritized Backlog
+## Key API Endpoints
+- `POST /api/sessions` - Create session
+- `POST /api/sessions/{id}/finalize` - Create photo strip + MP4
+- `GET /api/sessions/{id}` - Get session with photos
+- `GET /api/resolve/{shortId}` - Resolve short ID to session ID
+- `GET /api/download/{id}/image` - Download photo strip
+- `GET /api/download/{id}/video` - Download MP4 video
 
-### P0 - Critical (User requested for later)
-- [ ] Upload custom templates
-- [ ] Upload custom stickers
-- [ ] Real camera hardware integration
+## Database Schema (MongoDB)
+**Collection: sessions**
+- `id`: string (UUID)
+- `short_id`: string (7 char)
+- `photos`: array of base64 data URLs
+- `final_image_url`: string (path to photo strip)
+- `video_url`: string (path to MP4)
+- `template_id`: string
+- `status`: string
+
+## What's Implemented ✅
+
+### Session 1 (Initial Build)
+- Full-stack app structure (React + FastAPI + MongoDB)
+- Complete user flow: Template → Camera → Decorate → QR → Download
+- 16:9 photo aspect ratio
+- 2x6 vertical photo strip layout
+- MP4 video generation (using imageio + ffmpeg)
+- Short URL sharing system
+- Drawing/sketch theme with cream/pink colors
+
+### Session 2 (Bug Fixes - Feb 21, 2026)
+- Fixed Camera page layout - monitor now bigger (maxWidth: 1100px)
+- Fixed "Your Strip" preview panel display
+- Moved Snap button under camera monitor
+- Fixed QR/Download page:
+  - Photos now loading correctly (base64 URL handling)
+  - Gallery-style layout with arrows and counter
+  - Smaller thumbnails with white frame
+- Made Decoration page preview bigger (400px)
+- Both /d/ and /i/ routes working for short URLs
+
+## Pending Tasks
 
 ### P1 - High Priority
-- [ ] Print functionality for physical photo strips
-- [ ] Multiple photo strip layouts (horizontal, grid)
-- [ ] Undo/redo for sticker placement
+- **Real Camera Integration**: Replace mock with react-webcam
+- **User-Provided Assets**: Accept custom templates/stickers
 
-### P2 - Nice to Have
-- [ ] Photo filters (brightness, contrast, vintage)
-- [ ] Text overlay on photos
-- [ ] Email sharing option
-- [ ] Social media direct sharing
+### P2 - Future
+- **Print Functionality**: Browser print API integration
 
-## Next Tasks
-1. User to upload custom templates
-2. User to upload custom stickers
-3. Add camera hardware integration for production photobooth
-4. Consider adding print functionality
+## 3rd Party Dependencies
+- `imageio[ffmpeg]` - MP4 video generation
+- `Pillow` - Image manipulation
+- `shortuuid` - Short ID generation
+- `framer-motion` - Animations
+- `html2canvas` - Photo strip capture
