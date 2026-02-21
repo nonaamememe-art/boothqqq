@@ -31,20 +31,27 @@ export default function ShortUrlPage() {
       const sessionPhotos = sessionRes.data.photos || [];
       const mediaItems = [];
       
-      // Add individual photos first
+      // Add individual photos first (they could be base64 or file paths)
       sessionPhotos.forEach((photo, idx) => {
+        const photoUrl = photo.startsWith('data:') || photo.startsWith('http') 
+          ? photo 
+          : `${API.replace('/api', '')}${photo}`;
         mediaItems.push({ 
           type: 'photo', 
-          src: `${API.replace('/api', '')}${photo}`, 
+          src: photoUrl, 
           label: `Photo ${idx + 1}` 
         });
       });
       
       // Add photo strip
       if (sessionRes.data.final_image_url) {
+        const stripUrl = sessionRes.data.final_image_url;
+        const fullStripUrl = stripUrl.startsWith('data:') || stripUrl.startsWith('http')
+          ? stripUrl
+          : `${API.replace('/api', '')}${stripUrl}`;
         mediaItems.push({ 
           type: 'strip', 
-          src: `${API.replace('/api', '')}${sessionRes.data.final_image_url}`, 
+          src: fullStripUrl, 
           label: 'Photo Strip' 
         });
       }
