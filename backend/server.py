@@ -186,7 +186,7 @@ async def update_stickers(session_id: str, request: UpdateStickersRequest):
 
 @api_router.post("/sessions/{session_id}/finalize")
 async def finalize_session(session_id: str, request: FinalizeSessionRequest):
-    """Finalize session with decorated image and generate GIF"""
+    """Finalize session with decorated image and generate video"""
     session = await db.sessions.find_one({"id": session_id})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -201,31 +201,38 @@ async def finalize_session(session_id: str, request: FinalizeSessionRequest):
         logging.error(f"Error saving final image: {e}")
         raise HTTPException(status_code=400, detail="Invalid image data")
     
-    # Generate GIF from photos
-    gif_path = UPLOADS_DIR / f"{session_id}.gif"
+    # Generate video from photos at 1920x1080
+    video_path = UPLOADS_DIR / f"{session_id}.mp4"
     photos = session.get("photos", [])
     
     if photos:
         try:
-            images = []
+            frames = []
             for photo_data in photos:
                 img_data = base64.b64decode(photo_data.split(",")[1] if "," in photo_data else photo_data)
                 img = Image.open(BytesIO(img_data))
                 img = img.convert("RGB")
-                img = img.resize((540, 540))  # Half of 1080 for smaller GIF
-                images.append(img)
+                
+                # Create 1920x1080 frame with photo centered
+                frame = Image.new("RGB", (1920, 1080), (20, 20, 20))
+                # Resize photo to fit in frame (centered square)
+                photo_size = 1000
+                img_resized = img.resize((photo_size, photo_size), Image.Resampling.LANCZOS)
+                x_offset = (1920 - photo_size) // 2
+                y_offset = (1080 - photo_size) // 2
+                frame.paste(img_resized, (x_offset, y_offset))
+                
+                # Add frame multiple times for duration (1 second per photo at 30fps)
+                import numpy as np
+                frame_array = np.array(frame)
+                for _ in range(30):  # 30 frames = 1 second
+                    frames.append(frame_array)
             
-            # Save as GIF
-            if images:
-                images[0].save(
-                    gif_path,
-                    save_all=True,
-                    append_images=images[1:],
-                    duration=800,
-                    loop=0
-                )
+            # Save as MP4 video
+            if frames:
+                imageio.mimsave(str(video_path), frames, fps=30, codec='libx264')
         except Exception as e:
-            logging.error(f"Error generating GIF: {e}")
+            logging.error(f"Error generating video: {e}")
     
     # Update session
     await db.sessions.update_one(
@@ -233,7 +240,7 @@ async def finalize_session(session_id: str, request: FinalizeSessionRequest):
         {"$set": {
             "status": "completed",
             "final_image_url": f"/api/download/{session_id}/image",
-            "gif_url": f"/api/download/{session_id}/gif"
+            "video_url": f"/api/download/{session_id}/video"
         }}
     )
     
