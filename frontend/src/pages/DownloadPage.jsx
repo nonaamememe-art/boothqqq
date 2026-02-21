@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Download, Image, Film, Home } from "lucide-react";
@@ -8,24 +8,51 @@ import axios from "axios";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function DownloadPage() {
-  const { sessionId } = useParams();
+  const { sessionId, shortId } = useParams();
+  const location = useLocation();
 
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [resolvedSessionId, setResolvedSessionId] = useState(null);
 
   useEffect(() => {
     fetchSession();
-  }, [sessionId]);
+  }, [sessionId, shortId]);
 
   const fetchSession = async () => {
     try {
-      const response = await axios.get(`${API}/share/${sessionId}`);
-      setSession(response.data);
-      // Set the photo strip as default selected
-      if (response.data.photobooth_image_url) {
-        setSelectedPhoto({ type: 'strip', url: response.data.photobooth_image_url });
+      let actualSessionId = sessionId;
+      
+      // If this is a short URL (/d/:shortId), resolve it first
+      if (shortId || location.pathname.includes('/d/')) {
+        const idToResolve = shortId || sessionId;
+        try {
+          const resolveRes = await axios.get(`${API}/resolve/${idToResolve}`);
+          actualSessionId = resolveRes.data.session_id;
+        } catch (e) {
+          // If resolve fails, try using it as a regular session ID
+          actualSessionId = idToResolve;
+        }
+      }
+      
+      setResolvedSessionId(actualSessionId);
+      
+      // Try share endpoint first (works with both session ID and short ID)
+      try {
+        const response = await axios.get(`${API}/share/${actualSessionId}`);
+        setSession(response.data);
+        if (response.data.photobooth_image_url) {
+          setSelectedPhoto({ type: 'strip', url: response.data.photobooth_image_url });
+        }
+      } catch (e) {
+        // Fall back to regular session endpoint
+        const response = await axios.get(`${API}/sessions/${actualSessionId}`);
+        setSession(response.data);
+        if (response.data.final_image_url) {
+          setSelectedPhoto({ type: 'strip', url: response.data.final_image_url });
+        }
       }
     } catch (error) {
       console.error("Error fetching session:", error);
