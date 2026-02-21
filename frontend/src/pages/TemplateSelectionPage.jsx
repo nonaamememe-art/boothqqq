@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Check, Camera, Sparkles } from "lucide-react";
+import { Check, Camera } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -49,198 +49,121 @@ export default function TemplateSelectionPage() {
   };
 
   return (
-    <div className="min-h-screen paper-bg">
+    <div className="h-screen w-screen overflow-hidden paper-bg flex flex-col">
       {/* Header */}
-      <header className="py-8 px-6">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: -20, rotate: -2 }}
-            animate={{ opacity: 1, y: 0, rotate: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center"
-          >
-            <h1 
-              className="text-6xl md:text-7xl font-bold text-gray-800 inline-block"
-              style={{ fontFamily: 'var(--font-heading)' }}
-              data-testid="app-title"
-            >
-              Power of Ten
-            </h1>
-            <motion.div
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ delay: 0.3 }}
-              className="h-1.5 bg-pink-400 mx-auto mt-2"
-              style={{ width: '200px', borderRadius: '255px 15px 225px 15px/15px 225px 15px 255px' }}
-            />
-            <p className="mt-4 text-xl text-gray-600" style={{ fontFamily: 'var(--font-handwritten)' }}>
-              Create stunning photo strips in seconds ✨
-            </p>
-          </motion.div>
-        </div>
+      <header className="py-6 text-center flex-shrink-0">
+        <h1 
+          className="text-7xl font-bold text-gray-800"
+          style={{ fontFamily: 'var(--font-heading)' }}
+          data-testid="app-title"
+        >
+          Power of Ten
+        </h1>
+        <div 
+          className="h-2 bg-pink-400 mx-auto mt-3"
+          style={{ width: '250px', borderRadius: '255px 15px 225px 15px/15px 225px 15px 255px' }}
+        />
       </header>
 
-      {/* Progress Steps */}
-      <div className="max-w-4xl mx-auto px-6 mb-12">
-        <div className="flex items-center justify-center gap-3 flex-wrap">
-          {['Choose Style', 'Take Photos', 'Decorate', 'Share!'].map((step, index) => (
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 * index }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full ${
-                index === 0 
-                  ? 'bg-pink-400 text-white sketch-border-light' 
-                  : 'bg-white/80 text-gray-500 sketch-border-light'
-              }`}
-              style={{ fontFamily: 'var(--font-handwritten)', transform: `rotate(${index % 2 === 0 ? -1 : 1}deg)` }}
-              data-testid={`step-${index}`}
-            >
-              <span className="w-6 h-6 rounded-full bg-white/30 flex items-center justify-center text-sm font-bold">
-                {index + 1}
-              </span>
-              <span>{step}</span>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 pb-32">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <h2 
-            className="text-3xl font-bold text-gray-800 mb-8 text-center"
-            style={{ fontFamily: 'var(--font-heading)', transform: 'rotate(-1deg)' }}
+      <main className="flex-1 flex items-center justify-center gap-16 px-16">
+        {/* Template Cards */}
+        {templates.map((template, index) => (
+          <motion.div
+            key={template.id}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 * index }}
+            whileHover={{ scale: 1.03 }}
+            className="cursor-pointer"
+            onClick={() => setSelectedTemplate(template)}
+            data-testid={`template-${template.id}`}
           >
-            Pick Your Style! 🎨
-          </h2>
-
-          {/* Template Grid - 2x6 vertical strip preview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            {templates.map((template, index) => (
-              <motion.div
-                key={template.id}
-                initial={{ opacity: 0, y: 20, rotate: index % 2 === 0 ? -2 : 2 }}
-                animate={{ opacity: 1, y: 0, rotate: index % 2 === 0 ? -1 : 1 }}
-                transition={{ duration: 0.4, delay: 0.1 * index }}
-                whileHover={{ scale: 1.02, rotate: 0 }}
-                className="cursor-pointer"
-                onClick={() => setSelectedTemplate(template)}
-                data-testid={`template-${template.id}`}
+            <div
+              className={`sketch-border bg-white p-4 transition-all ${
+                selectedTemplate?.id === template.id
+                  ? "ring-4 ring-pink-400 ring-offset-4"
+                  : ""
+              }`}
+              style={{ width: '320px' }}
+            >
+              {/* Template Preview - 2x6 vertical strip */}
+              <div 
+                className="relative rounded p-4"
+                style={{ backgroundColor: template.background_color }}
               >
-                <div
-                  className={`sketch-border overflow-hidden bg-white p-3 transition-all duration-200 ${
-                    selectedTemplate?.id === template.id
-                      ? "ring-4 ring-pink-400 ring-offset-4"
-                      : ""
-                  }`}
-                >
-                  {/* Template Preview - 2x6 vertical strip with 4 photos */}
-                  <div 
-                    className="relative overflow-hidden rounded p-3"
-                    style={{ backgroundColor: template.background_color }}
-                  >
-                    {/* 4 photos stacked vertically (2x6 paper format) */}
-                    <div className="flex flex-col gap-2">
-                      {[1, 2, 3, 4].map((num) => (
-                        <div
-                          key={num}
-                          className="rounded overflow-hidden"
-                          style={{ 
-                            aspectRatio: "16/9",
-                            backgroundColor: template.frame_color,
-                            border: '2px solid',
-                            borderColor: template.id === 'modern-dark' ? '#4b5563' : '#d1d5db'
-                          }}
-                        >
-                          <div 
-                            className="w-full h-full"
-                            style={{ 
-                              backgroundColor: template.id === 'modern-dark' ? '#4b5563' : '#e5e7eb'
-                            }}
-                          />
-                        </div>
-                      ))}
+                <div className="flex flex-col gap-2">
+                  {[1, 2, 3, 4].map((num) => (
+                    <div
+                      key={num}
+                      className="rounded overflow-hidden"
+                      style={{ 
+                        aspectRatio: "16/9",
+                        backgroundColor: template.frame_color,
+                        border: '2px solid',
+                        borderColor: template.id === 'modern-dark' ? '#4b5563' : '#d1d5db'
+                      }}
+                    >
+                      <div 
+                        className="w-full h-full"
+                        style={{ backgroundColor: template.id === 'modern-dark' ? '#4b5563' : '#e5e7eb' }}
+                      />
                     </div>
-                    
-                    {/* Selected Indicator */}
-                    {selectedTemplate?.id === template.id && (
-                      <motion.div
-                        initial={{ scale: 0, rotate: -180 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        className="absolute top-3 right-3 w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center shadow-lg"
-                        style={{ border: '3px solid white' }}
-                      >
-                        <Check className="w-5 h-5 text-white" />
-                      </motion.div>
-                    )}
-                  </div>
-
-                  {/* Template Info */}
-                  <div className="p-4 text-center">
-                    <h3 
-                      className="text-2xl font-bold text-gray-800"
-                      style={{ fontFamily: 'var(--font-heading)' }}
-                    >
-                      {template.name}
-                    </h3>
-                    <p 
-                      className="text-gray-500 mt-1"
-                      style={{ fontFamily: 'var(--font-handwritten)' }}
-                    >
-                      {template.description}
-                    </p>
-                  </div>
+                  ))}
                 </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+                
+                {selectedTemplate?.id === template.id && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-4 right-4 w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center shadow-lg"
+                  >
+                    <Check className="w-6 h-6 text-white" />
+                  </motion.div>
+                )}
+              </div>
 
-        {/* Start Button */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-12 text-center"
-        >
-          <Button
-            size="lg"
-            className="btn-sketch px-12 py-6 text-xl bg-pink-400 hover:bg-pink-500 text-white"
-            onClick={handleStartSession}
-            disabled={!selectedTemplate || loading}
-            data-testid="start-session-btn"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Starting...
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <Camera className="w-6 h-6" />
-                Let's Go!
-              </span>
-            )}
-          </Button>
-        </motion.div>
+              <div className="pt-4 text-center">
+                <h3 
+                  className="text-3xl font-bold text-gray-800"
+                  style={{ fontFamily: 'var(--font-heading)' }}
+                >
+                  {template.name}
+                </h3>
+                <p 
+                  className="text-lg text-gray-500 mt-1"
+                  style={{ fontFamily: 'var(--font-handwritten)' }}
+                >
+                  {template.description}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        ))}
       </main>
 
-      {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 py-4 bg-white/90 backdrop-blur-sm border-t-2 border-dashed border-gray-200">
-        <div className="max-w-4xl mx-auto px-6 flex items-center justify-center gap-2 text-gray-500">
-          <Sparkles className="w-4 h-4 text-pink-400" />
-          <span style={{ fontFamily: 'var(--font-handwritten)' }}>
-            Take 4 photos • Add fun stickers • Share with friends!
-          </span>
-          <Sparkles className="w-4 h-4 text-pink-400" />
-        </div>
-      </footer>
+      {/* Start Button */}
+      <div className="py-8 text-center flex-shrink-0">
+        <Button
+          size="lg"
+          className="btn-sketch px-16 py-8 text-3xl bg-pink-400 hover:bg-pink-500 text-white"
+          onClick={handleStartSession}
+          disabled={!selectedTemplate || loading}
+          data-testid="start-session-btn"
+        >
+          {loading ? (
+            <span className="flex items-center gap-3">
+              <span className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+              Starting...
+            </span>
+          ) : (
+            <span className="flex items-center gap-3">
+              <Camera className="w-10 h-10" />
+              Let's Go!
+            </span>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

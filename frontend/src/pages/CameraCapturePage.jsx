@@ -64,7 +64,7 @@ export default function CameraCapturePage() {
       }
     } catch (error) {
       console.error("Camera error:", error);
-      setCameraError("Camera access denied. Please allow camera access and refresh.");
+      setCameraError("Camera access denied");
       toast.error("Camera access denied");
     }
   };
@@ -79,11 +79,9 @@ export default function CameraCapturePage() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    // Capture at 16:9 aspect ratio (1920x1080)
     canvas.width = 1920;
     canvas.height = 1080;
 
-    // Draw video frame (mirrored)
     ctx.save();
     ctx.scale(-1, 1);
     ctx.drawImage(video, -1920, 0, 1920, 1080);
@@ -137,171 +135,132 @@ export default function CameraCapturePage() {
   };
 
   return (
-    <div className="min-h-screen paper-bg flex flex-col">
-      {/* Header */}
-      <header className="py-4 px-6 text-center">
-        <h1 
-          className="text-4xl font-bold text-gray-800"
-          style={{ fontFamily: 'var(--font-heading)' }}
+    <div className="h-screen w-screen overflow-hidden paper-bg flex">
+      {/* Camera Monitor - Main Area */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div 
+          className="relative sketch-border bg-white overflow-hidden"
+          style={{ width: "1280px", height: "720px" }}
+          data-testid="camera-view"
         >
-          📸 Say Cheese!
-        </h1>
-        <p 
-          className="text-gray-500 mt-1"
-          style={{ fontFamily: 'var(--font-handwritten)' }}
-        >
-          Photo {Math.min(photos.length + 1, 4)} of 4
-        </p>
-      </header>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+            style={{ transform: "scaleX(-1)" }}
+          />
+          <canvas ref={canvasRef} className="hidden" />
 
-      {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center gap-8 px-6 pb-6">
-        {/* Camera Monitor - 16:9 aspect ratio */}
-        <div className="flex-shrink-0">
-          <div 
-            className="relative rounded-2xl overflow-hidden sketch-border bg-white"
-            style={{ width: "640px", aspectRatio: "16/9" }}
-            data-testid="camera-view"
-          >
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-              style={{ transform: "scaleX(-1)" }}
-            />
-            <canvas ref={canvasRef} className="hidden" />
-
-            {cameraError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                <div className="text-center p-6">
-                  <div className="text-6xl mb-4">📷</div>
-                  <p className="text-lg text-gray-600 mb-4" style={{ fontFamily: 'var(--font-handwritten)' }}>
-                    {cameraError}
-                  </p>
-                  <Button 
-                    className="btn-sketch bg-pink-400 hover:bg-pink-500 text-white"
-                    onClick={initCamera}
-                    data-testid="retry-camera-btn"
-                  >
-                    Try Again
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {!cameraReady && !cameraError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-gray-500" style={{ fontFamily: 'var(--font-handwritten)' }}>
-                    Getting camera ready...
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <AnimatePresence>
-              {countdown !== null && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 flex items-center justify-center bg-black/50 z-50"
-                  data-testid="countdown-overlay"
+          {cameraError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+              <div className="text-center">
+                <div className="text-8xl mb-6">📷</div>
+                <p className="text-2xl text-gray-600 mb-6" style={{ fontFamily: 'var(--font-handwritten)' }}>
+                  {cameraError}
+                </p>
+                <Button 
+                  className="btn-sketch bg-pink-400 hover:bg-pink-500 text-white text-xl px-8 py-4"
+                  onClick={initCamera}
                 >
-                  <motion.span
-                    key={countdown}
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 1.5, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="text-[12rem] font-bold text-white countdown-number-sketch"
-                    data-testid="countdown-number"
-                  >
-                    {countdown}
-                  </motion.span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Photo count badge */}
-            <div 
-              className="absolute top-4 left-4 px-4 py-2 bg-white/90 backdrop-blur rounded-full text-gray-800 sketch-border-light"
-              style={{ fontFamily: 'var(--font-handwritten)' }}
-            >
-              {photos.length}/4 Photos
+                  Try Again
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Photo Strip Preview - 2x6 vertical with 4 photos stacked */}
-        <div className="flex-shrink-0">
-          <div 
-            className="sketch-border bg-white p-3"
-            style={{ 
-              backgroundColor: template?.background_color || '#fef9f3',
-              width: '160px',
-              transform: 'rotate(1deg)'
-            }}
-          >
-            <h3 
-              className="text-lg font-bold mb-2 text-center text-gray-800"
-              style={{ fontFamily: 'var(--font-heading)' }}
-            >
-              Your Strip 📸
-            </h3>
-            
-            {/* 4 photos stacked vertically - 16:9 aspect ratio each */}
-            <div className="flex flex-col gap-2">
-              {[0, 1, 2, 3].map((index) => (
-                <div
-                  key={index}
-                  className="rounded overflow-hidden border-2 border-dashed"
-                  style={{ 
-                    aspectRatio: "16/9",
-                    borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db',
-                    backgroundColor: template?.frame_color || '#ffffff',
-                  }}
-                  data-testid={`photo-preview-${index}`}
-                >
-                  {photos[index] ? (
-                    <img
-                      src={photos[index]}
-                      alt={`Photo ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                      <span className="text-lg text-gray-300">{index + 1}</span>
-                    </div>
-                  )}
-                </div>
-              ))}
+          {!cameraReady && !cameraError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+              <div className="text-center">
+                <div className="w-16 h-16 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-6" />
+                <p className="text-2xl text-gray-500" style={{ fontFamily: 'var(--font-handwritten)' }}>
+                  Getting camera ready...
+                </p>
+              </div>
             </div>
+          )}
 
-            {/* Branding */}
-            <div className="mt-2 text-center">
-              <p 
-                className="text-xs font-bold text-gray-400"
-                style={{ fontFamily: 'var(--font-heading)' }}
+          <AnimatePresence>
+            {countdown !== null && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 flex items-center justify-center bg-black/50 z-50"
               >
-                ✨ Power of Ten ✨
-              </p>
-            </div>
+                <motion.span
+                  key={countdown}
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 1.5, opacity: 0 }}
+                  className="text-[20rem] font-bold text-white"
+                  style={{ textShadow: '0 0 100px rgba(255,255,255,0.5)' }}
+                >
+                  {countdown}
+                </motion.span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Photo count */}
+          <div className="absolute top-6 left-6 px-6 py-3 bg-white/90 backdrop-blur rounded-full text-xl font-bold text-gray-800">
+            {photos.length}/4 Photos
           </div>
         </div>
-      </main>
+      </div>
 
-      {/* Bottom Controls */}
-      <div className="py-6 flex justify-center">
+      {/* Right Panel - Preview & Button */}
+      <div className="w-80 flex flex-col p-6 gap-6">
+        {/* Photo Strip Preview */}
+        <div 
+          className="sketch-border flex-1 p-4"
+          style={{ backgroundColor: template?.background_color || '#fef9f3' }}
+        >
+          <h3 
+            className="text-2xl font-bold text-center text-gray-800 mb-4"
+            style={{ fontFamily: 'var(--font-heading)' }}
+          >
+            📸 Your Strip
+          </h3>
+          
+          <div className="flex flex-col gap-3">
+            {[0, 1, 2, 3].map((index) => (
+              <div
+                key={index}
+                className="rounded overflow-hidden border-2 border-dashed"
+                style={{ 
+                  aspectRatio: "16/9",
+                  borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db',
+                  backgroundColor: template?.frame_color || '#ffffff',
+                }}
+                data-testid={`photo-preview-${index}`}
+              >
+                {photos[index] ? (
+                  <img src={photos[index]} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <span className="text-2xl text-gray-300">{index + 1}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 text-center">
+            <p className="text-sm font-bold text-gray-400" style={{ fontFamily: 'var(--font-heading)' }}>
+              ✨ Power of Ten ✨
+            </p>
+          </div>
+        </div>
+
+        {/* Action Button */}
         {photos.length < 4 ? (
           <Button
             size="lg"
             onClick={startCountdown}
             disabled={!cameraReady || isCapturing}
-            className="btn-sketch px-12 py-6 text-2xl bg-pink-400 hover:bg-pink-500 text-white"
+            className="btn-sketch py-8 text-2xl bg-pink-400 hover:bg-pink-500 text-white"
             data-testid="capture-btn"
           >
             <Camera className="w-8 h-8 mr-3" />
@@ -311,11 +270,11 @@ export default function CameraCapturePage() {
           <Button
             size="lg"
             onClick={proceedToDecorate}
-            className="btn-sketch px-12 py-6 text-2xl bg-pink-400 hover:bg-pink-500 text-white"
+            className="btn-sketch py-8 text-2xl bg-pink-400 hover:bg-pink-500 text-white"
             data-testid="proceed-decorate-btn"
           >
             <ArrowRight className="w-8 h-8 mr-3" />
-            Add Stickers!
+            Decorate!
           </Button>
         )}
       </div>

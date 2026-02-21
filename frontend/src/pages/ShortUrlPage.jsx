@@ -14,10 +14,8 @@ export default function ShortUrlPage() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [photos, setPhotos] = useState([]);
   const [allMedia, setAllMedia] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [eventTitle, setEventTitle] = useState("Power of Ten");
 
   useEffect(() => {
     fetchSession();
@@ -27,63 +25,34 @@ export default function ShortUrlPage() {
     try {
       const resolveRes = await axios.get(`${API}/resolve/${shortId}`);
       const sessionId = resolveRes.data.session_id;
-      
       const sessionRes = await axios.get(`${API}/sessions/${sessionId}`);
       setSession({ ...sessionRes.data, fullId: sessionId });
       
       const sessionPhotos = sessionRes.data.photos || [];
-      setPhotos(sessionPhotos);
-      
-      // Build media array: 4 photos + photo strip + video
       const mediaItems = [];
       
-      // Add 4 individual photos
       sessionPhotos.forEach((photo, idx) => {
-        mediaItems.push({
-          type: 'photo',
-          src: photo,
-          label: `Photo ${idx + 1}`
-        });
+        mediaItems.push({ type: 'photo', src: photo, label: `Photo ${idx + 1}` });
       });
       
-      // Add photo strip (5th item)
       if (sessionRes.data.final_image_url) {
-        mediaItems.push({
-          type: 'strip',
-          src: `${API.replace('/api', '')}${sessionRes.data.final_image_url}`,
-          label: 'Photo Strip'
-        });
+        mediaItems.push({ type: 'strip', src: `${API.replace('/api', '')}${sessionRes.data.final_image_url}`, label: 'Photo Strip' });
       }
       
-      // Add video (6th item) - MP4 format
       if (sessionRes.data.video_url) {
-        mediaItems.push({
-          type: 'video',
-          src: `${API.replace('/api', '')}${sessionRes.data.video_url}`,
-          label: 'Video'
-        });
+        mediaItems.push({ type: 'video', src: `${API.replace('/api', '')}${sessionRes.data.video_url}`, label: 'Video' });
       }
       
       setAllMedia(mediaItems);
     } catch (error) {
-      console.error("Error fetching session:", error);
-      setError("Photo not found or has expired");
+      setError("Photo not found");
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePrev = () => {
-    setCurrentIndex(prev => (prev > 0 ? prev - 1 : allMedia.length - 1));
-  };
-
-  const handleNext = () => {
-    setCurrentIndex(prev => (prev < allMedia.length - 1 ? prev + 1 : 0));
-  };
-
-  const handleThumbnailClick = (index) => {
-    setCurrentIndex(index);
-  };
+  const handlePrev = () => setCurrentIndex(prev => (prev > 0 ? prev - 1 : allMedia.length - 1));
+  const handleNext = () => setCurrentIndex(prev => (prev < allMedia.length - 1 ? prev + 1 : 0));
 
   const handleDownload = () => {
     const currentMedia = allMedia[currentIndex];
@@ -94,7 +63,6 @@ export default function ShortUrlPage() {
     } else if (currentMedia.type === 'strip') {
       window.open(`${API.replace('/api', '')}/api/download/${session.fullId}/image`, '_blank');
     } else {
-      // For individual photos, create download
       const link = document.createElement('a');
       link.href = currentMedia.src;
       link.download = `photo-${currentIndex + 1}.jpg`;
@@ -103,47 +71,33 @@ export default function ShortUrlPage() {
   };
 
   const handleShare = async () => {
-    const shareUrl = window.location.href;
-    
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: eventTitle,
-          text: 'Check out my photos!',
-          url: shareUrl
-        });
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          copyToClipboard(shareUrl);
+        await navigator.share({ title: 'Power of Ten', url: window.location.href });
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          navigator.clipboard.writeText(window.location.href);
+          toast.success("Link copied!");
         }
       }
     } else {
-      copyToClipboard(shareUrl);
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copied!");
     }
-  };
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Link copied!");
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center paper-bg">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-xl text-gray-600" style={{ fontFamily: 'var(--font-handwritten)' }}>Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-12 h-12 border-4 border-pink-400 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center paper-bg">
-        <div className="text-center">
-          <p className="text-2xl text-gray-600 mb-4" style={{ fontFamily: 'var(--font-handwritten)' }}>{error}</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <p className="text-xl text-gray-600">{error}</p>
       </div>
     );
   }
@@ -151,160 +105,93 @@ export default function ShortUrlPage() {
   const currentMedia = allMedia[currentIndex];
 
   return (
-    <div className="min-h-screen paper-bg flex flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b-2 border-dashed border-gray-300">
-        <h1 
-          className="text-2xl font-bold text-gray-800"
-          style={{ fontFamily: 'var(--font-heading)' }}
-        >
-          {eventTitle}
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Mobile Header */}
+      <header className="flex items-center justify-between px-4 py-3 bg-white border-b safe-area-top">
+        <h1 className="text-lg font-bold text-gray-800" style={{ fontFamily: 'var(--font-heading)' }}>
+          Power of Ten
         </h1>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleDownload}
-            className="text-gray-600 hover:bg-pink-50 hover:text-pink-500"
-            data-testid="download-btn"
-          >
-            <Download className="w-6 h-6" />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={handleDownload} className="p-2">
+            <Download className="w-5 h-5" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleShare}
-            className="text-gray-600 hover:bg-pink-50 hover:text-pink-500"
-            data-testid="share-btn"
-          >
-            <Share2 className="w-6 h-6" />
+          <Button variant="ghost" size="sm" onClick={handleShare} className="p-2">
+            <Share2 className="w-5 h-5" />
           </Button>
         </div>
       </header>
 
-      {/* Main Preview Area */}
-      <main className="flex-1 flex items-center justify-center relative px-4">
-        {/* Previous Button */}
+      {/* Main Preview */}
+      <main className="flex-1 flex items-center justify-center relative bg-black">
         {allMedia.length > 1 && (
-          <button
-            onClick={handlePrev}
-            className="absolute left-4 z-10 p-2 text-gray-400 hover:text-pink-500 transition-colors"
-            data-testid="prev-btn"
-          >
-            <ChevronLeft className="w-12 h-12" />
+          <button onClick={handlePrev} className="absolute left-2 z-10 p-2 text-white/70 active:text-white">
+            <ChevronLeft className="w-8 h-8" />
           </button>
         )}
 
-        {/* Current Media Display */}
         <AnimatePresence mode="wait">
           {currentMedia && (
             <motion.div
               key={currentIndex}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="relative flex items-center justify-center"
-              style={{ maxWidth: '80vw', maxHeight: '65vh' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="w-full h-full flex items-center justify-center p-2"
             >
-              <div className="sketch-border bg-white p-3">
-                {currentMedia.type === 'video' ? (
-                  <video
-                    src={currentMedia.src}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    controls
-                    className="max-h-[60vh] rounded"
-                    style={{ maxWidth: '100%' }}
-                    data-testid="video-preview"
-                  />
-                ) : currentMedia.type === 'strip' ? (
-                  <img
-                    src={currentMedia.src}
-                    alt={currentMedia.label}
-                    className="max-h-[60vh] object-contain rounded"
-                    style={{ maxWidth: '300px' }}
-                    data-testid="strip-preview"
-                  />
-                ) : (
-                  <img
-                    src={currentMedia.src}
-                    alt={currentMedia.label}
-                    className="max-h-[60vh] object-contain rounded"
-                    style={{ maxWidth: '100%' }}
-                    data-testid="image-preview"
-                  />
-                )}
-              </div>
-
-              {/* Photo Counter */}
-              <div 
-                className="absolute top-6 right-6 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-gray-600 text-sm sketch-border-light"
-                style={{ fontFamily: 'var(--font-handwritten)' }}
-              >
-                {currentIndex + 1}/{allMedia.length}
-              </div>
+              {currentMedia.type === 'video' ? (
+                <video
+                  src={currentMedia.src}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  controls
+                  className="max-w-full max-h-full object-contain rounded-lg"
+                />
+              ) : (
+                <img
+                  src={currentMedia.src}
+                  alt={currentMedia.label}
+                  className="max-w-full max-h-full object-contain rounded-lg"
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Next Button */}
         {allMedia.length > 1 && (
-          <button
-            onClick={handleNext}
-            className="absolute right-4 z-10 p-2 text-gray-400 hover:text-pink-500 transition-colors"
-            data-testid="next-btn"
-          >
-            <ChevronRight className="w-12 h-12" />
+          <button onClick={handleNext} className="absolute right-2 z-10 p-2 text-white/70 active:text-white">
+            <ChevronRight className="w-8 h-8" />
           </button>
         )}
+
+        {/* Counter */}
+        <div className="absolute top-3 right-3 px-2 py-1 bg-black/60 rounded-full text-white text-xs">
+          {currentIndex + 1}/{allMedia.length}
+        </div>
       </main>
 
       {/* Thumbnail Gallery */}
-      {allMedia.length > 0 && (
-        <div className="py-6 px-4 border-t-2 border-dashed border-gray-300">
-          <div className="flex items-center justify-center gap-3 overflow-x-auto">
-            {allMedia.map((media, index) => (
-              <motion.button
-                key={index}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleThumbnailClick(index)}
-                className={`flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
-                  index === currentIndex
-                    ? 'border-pink-400 shadow-lg'
-                    : 'border-gray-200 opacity-60 hover:opacity-100 hover:border-pink-300'
-                }`}
-                style={{
-                  width: media.type === 'strip' ? '40px' : '80px',
-                  height: '80px'
-                }}
-                data-testid={`thumbnail-${index}`}
-              >
-                {media.type === 'video' ? (
-                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                    <span className="text-2xl">🎬</span>
-                  </div>
-                ) : media.type === 'strip' ? (
-                  <img
-                    src={media.src}
-                    alt={media.label}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <img
-                    src={media.src}
-                    alt={media.label}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-              </motion.button>
-            ))}
-          </div>
+      <div className="bg-white border-t py-3 px-2 safe-area-bottom">
+        <div className="flex items-center justify-start gap-2 overflow-x-auto pb-1">
+          {allMedia.map((media, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentIndex(index)}
+              className={`flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
+                index === currentIndex ? 'border-pink-400' : 'border-transparent opacity-60'
+              }`}
+              style={{ width: media.type === 'strip' ? '32px' : '56px', height: '56px' }}
+            >
+              {media.type === 'video' ? (
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-lg">🎬</div>
+              ) : (
+                <img src={media.src} alt={media.label} className="w-full h-full object-cover" />
+              )}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }

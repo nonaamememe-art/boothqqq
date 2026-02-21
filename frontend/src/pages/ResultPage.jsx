@@ -20,11 +20,8 @@ export default function ResultPage() {
 
   const fetchQRCode = async () => {
     try {
-      const response = await axios.get(`${API}/qrcode/${sessionId}`, {
-        responseType: 'blob'
-      });
-      const url = URL.createObjectURL(response.data);
-      setQrCodeUrl(url);
+      const response = await axios.get(`${API}/qrcode/${sessionId}`, { responseType: 'blob' });
+      setQrCodeUrl(URL.createObjectURL(response.data));
     } catch (error) {
       console.error("Error fetching QR code:", error);
     }
@@ -33,83 +30,59 @@ export default function ResultPage() {
   const fetchShortUrl = async () => {
     try {
       const shareRes = await axios.get(`${API}/share/${sessionId}`);
-      const baseUrl = window.location.origin;
-      setShortUrl(`${baseUrl}/i/${shareRes.data.short_id}`);
+      setShortUrl(`${window.location.origin}/i/${shareRes.data.short_id}`);
     } catch (error) {
       console.error("Error fetching short URL:", error);
     }
   };
 
-  const goHome = () => {
-    navigate('/');
-  };
-
   return (
-    <div className="min-h-screen paper-bg flex flex-col">
+    <div className="h-screen w-screen overflow-hidden paper-bg flex flex-col items-center justify-center">
       {/* Home Button */}
-      <div className="absolute top-6 left-6 z-10">
+      <div className="absolute top-8 left-8">
         <Button
-          onClick={goHome}
-          className="btn-sketch bg-white hover:bg-gray-100 text-gray-800 px-6 py-3"
+          onClick={() => navigate('/')}
+          className="btn-sketch bg-white hover:bg-gray-100 text-gray-800 px-8 py-4 text-xl"
           data-testid="home-btn"
         >
-          <Home className="w-5 h-5 mr-2" />
+          <Home className="w-6 h-6 mr-2" />
           Home
         </Button>
       </div>
 
-      {/* QR Code - Center */}
-      <div className="flex-1 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-center"
+      {/* QR Code */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center"
+      >
+        <h1 
+          className="text-6xl font-bold text-gray-800 mb-8"
+          style={{ fontFamily: 'var(--font-heading)' }}
         >
-          <h1 
-            className="text-5xl font-bold text-gray-800 mb-8"
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            📱 Scan to Download!
-          </h1>
+          📱 Scan to Download!
+        </h1>
 
-          {/* QR Code */}
-          <div 
-            className="sketch-border bg-white p-8 inline-block"
-            data-testid="qr-code-container"
-          >
-            {qrCodeUrl ? (
-              <img
-                src={qrCodeUrl}
-                alt="QR Code"
-                className="w-80 h-80"
-                data-testid="qr-code-image"
-              />
-            ) : (
-              <div className="w-80 h-80 flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-pink-400 border-dashed rounded-full animate-spin" />
-              </div>
-            )}
-          </div>
-
-          {/* Short URL */}
-          {shortUrl && (
-            <p 
-              className="mt-6 text-xl text-gray-500"
-              style={{ fontFamily: 'var(--font-handwritten)' }}
-            >
-              {shortUrl}
-            </p>
+        <div className="sketch-border bg-white p-10 inline-block">
+          {qrCodeUrl ? (
+            <img src={qrCodeUrl} alt="QR Code" className="w-[400px] h-[400px]" />
+          ) : (
+            <div className="w-[400px] h-[400px] flex items-center justify-center">
+              <div className="w-16 h-16 border-4 border-pink-400 border-dashed rounded-full animate-spin" />
+            </div>
           )}
+        </div>
 
-          <p 
-            className="mt-4 text-lg text-gray-400"
-            style={{ fontFamily: 'var(--font-handwritten)' }}
-          >
-            Point your phone camera at the QR code ✨
+        {shortUrl && (
+          <p className="mt-8 text-2xl text-gray-500" style={{ fontFamily: 'var(--font-handwritten)' }}>
+            {shortUrl}
           </p>
-        </motion.div>
-      </div>
+        )}
+
+        <p className="mt-4 text-xl text-gray-400" style={{ fontFamily: 'var(--font-handwritten)' }}>
+          Point your phone camera at the QR code ✨
+        </p>
+      </motion.div>
     </div>
   );
 }
