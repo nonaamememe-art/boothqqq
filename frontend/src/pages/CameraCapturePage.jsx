@@ -241,46 +241,89 @@ export default function CameraCapturePage() {
         </div>
       </div>
 
-      {/* Right Panel - Photo Strip Preview (Bigger) */}
+      {/* Right Panel - Photo Strip Preview */}
       <div className="w-[320px] lg:w-[380px] flex flex-col p-4 lg:p-6">
-        {/* Photo Strip Preview */}
-        <div 
-          className="sketch-border flex-1 p-4 lg:p-5 bg-white flex flex-col"
-          style={{ 
-            backgroundColor: template?.background_color || '#ffffff',
-          }}
-        >
+        <div className="sketch-border flex-1 bg-white flex flex-col overflow-hidden">
           <h3 
-            className="text-2xl lg:text-3xl font-bold text-center text-gray-800 mb-4 lg:mb-5"
+            className="text-2xl lg:text-3xl font-bold text-center text-gray-800 py-3 lg:py-4"
             style={{ fontFamily: 'var(--font-heading)' }}
           >
             📸 Your Strip
           </h3>
           
-          <div className="flex-1 flex flex-col gap-3 lg:gap-4">
-            {[0, 1, 2, 3].map((index) => (
-              <div
-                key={index}
-                className="flex-1 w-full rounded overflow-hidden border-2 border-dashed"
-                style={{ 
-                  aspectRatio: "16/9",
-                  borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db',
-                  backgroundColor: template?.frame_color || '#f3f4f6',
-                }}
-                data-testid={`photo-preview-${index}`}
-              >
-                {photos[index] ? (
-                  <img src={photos[index]} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-2xl lg:text-3xl text-gray-300" style={{ fontFamily: 'var(--font-handwritten)' }}>{index + 1}</span>
-                  </div>
-                )}
+          {/* Template Preview with Photos */}
+          <div className="flex-1 relative">
+            {template?.template_image_url ? (
+              /* Custom Template Image with Photo Overlays */
+              <div className="relative w-full h-full flex items-center justify-center p-2">
+                <div className="relative" style={{ maxHeight: '100%' }}>
+                  <img 
+                    src={template.template_image_url.startsWith('http') 
+                      ? template.template_image_url 
+                      : `${API.replace('/api', '')}${template.template_image_url}`}
+                    alt="Template"
+                    className="max-h-full w-auto"
+                    style={{ maxHeight: 'calc(100vh - 250px)' }}
+                  />
+                  {/* Photo overlays at slot positions */}
+                  {(template.photo_slots || []).map((slot, index) => {
+                    const scale = 0.5; // Scale down for preview
+                    return (
+                      <div
+                        key={index}
+                        className="absolute overflow-hidden"
+                        style={{
+                          left: `${slot.x * scale}px`,
+                          top: `${slot.y * scale}px`,
+                          width: `${slot.width * scale}px`,
+                          height: `${slot.height * scale}px`,
+                        }}
+                        data-testid={`photo-preview-${index}`}
+                      >
+                        {photos[index] ? (
+                          <img src={photos[index]} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 border border-dashed border-gray-300">
+                            <span className="text-lg text-gray-400">{index + 1}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
+            ) : (
+              /* Default Layout */
+              <div 
+                className="h-full p-3 lg:p-4 flex flex-col"
+                style={{ backgroundColor: template?.background_color || '#ffffff' }}
+              >
+                <div className="flex-1 flex flex-col gap-2 lg:gap-3">
+                  {[0, 1, 2, 3].map((index) => (
+                    <div
+                      key={index}
+                      className="flex-1 w-full rounded overflow-hidden border-2 border-dashed"
+                      style={{ 
+                        borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db',
+                        backgroundColor: template?.frame_color || '#f3f4f6',
+                      }}
+                      data-testid={`photo-preview-${index}`}
+                    >
+                      {photos[index] ? (
+                        <img src={photos[index]} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-2xl lg:text-3xl text-gray-300">{index + 1}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="mt-4 lg:mt-5 text-center">
+          <div className="py-2 lg:py-3 text-center">
             <p className="text-sm lg:text-base font-bold text-pink-400" style={{ fontFamily: 'var(--font-heading)' }}>
               ✨ Power of Ten ✨
             </p>
