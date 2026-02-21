@@ -322,6 +322,181 @@ async def resolve_short_id(short_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     return {"session_id": session.get("id"), "short_id": session.get("short_id")}
 
+# ============== ADMIN ENDPOINTS ==============
+
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
+
+# Create directories for admin uploads
+STICKERS_DIR = ROOT_DIR / 'static' / 'stickers'
+FRAMES_DIR = ROOT_DIR / 'static' / 'frames'
+STICKERS_DIR.mkdir(parents=True, exist_ok=True)
+FRAMES_DIR.mkdir(parents=True, exist_ok=True)
+
+class AdminLoginRequest(BaseModel):
+    password: str
+
+class TemplateCreate(BaseModel):
+    id: str
+    name: str
+    description: str
+    background_color: str
+    frame_color: str
+    text_color: str
+
+class StickerCreate(BaseModel):
+    name: str
+    category: str = "general"
+
+@api_router.post("/admin/login")
+async def admin_login(request: AdminLoginRequest):
+    """Verify admin password"""
+    if request.password == ADMIN_PASSWORD:
+        return {"success": True, "message": "Login successful"}
+    raise HTTPException(status_code=401, detail="Invalid password")
+
+@api_router.get("/admin/templates")
+async def get_templates():
+    """Get all templates"""
+    templates = await db.templates.find({}, {"_id": 0}).to_list(100)
+    if not templates:
+        # Return default templates
+        return [
+            {
+                "id": "classic-white",
+                "name": "Classic White",
+                "description": "Clean white frames with elegant spacing",
+                "background_color": "#ffffff",
+                "frame_color": "#f3f4f6",
+                "text_color": "#6b7280"
+            },
+            {
+                "id": "modern-dark",
+                "name": "Modern Dark",
+                "description": "Sleek dark theme with subtle shadows",
+                "background_color": "#1f2937",
+                "frame_color": "#374151",
+                "text_color": "#9ca3af"
+            }
+        ]
+    return templates
+
+@api_router.post("/admin/templates")
+async def create_template(template: TemplateCreate):
+    """Create or update a template"""
+    template_dict = template.model_dump()
+    await db.templates.update_one(
+        {"id": template.id},
+        {"$set": template_dict},
+        upsert=True
+    )
+    return {"success": True, "template": template_dict}
+
+@api_router.delete("/admin/templates/{template_id}")
+async def delete_template(template_id: str):
+    """Delete a template"""
+    result = await db.templates.delete_one({"id": template_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return {"success": True}
+
+@api_router.get("/admin/stickers")
+async def get_stickers():
+    """Get all stickers"""
+    stickers = await db.stickers.find({}, {"_id": 0}).to_list(100)
+    if not stickers:
+        # Return default stickers
+        return [
+            {"id": "heart", "name": "Heart", "url": "https://cdn-icons-png.flaticon.com/128/833/833472.png", "category": "love"},
+            {"id": "star", "name": "Star", "url": "https://cdn-icons-png.flaticon.com/128/1828/1828884.png", "category": "general"},
+            {"id": "smile", "name": "Smile", "url": "https://cdn-icons-png.flaticon.com/128/166/166538.png", "category": "emoji"},
+            {"id": "party", "name": "Party", "url": "https://cdn-icons-png.flaticon.com/128/3656/3656951.png", "category": "celebration"},
+            {"id": "crown", "name": "Crown", "url": "https://cdn-icons-png.flaticon.com/128/3157/3157124.png", "category": "general"},
+            {"id": "flower", "name": "Flower", "url": "https://cdn-icons-png.flaticon.com/128/2990/2990818.png", "category": "nature"}
+        ]
+    return stickers
+
+@api_router.post("/admin/stickers")
+async def upload_sticker(
+    name: str = "",
+    category: str = "general",
+    file: UploadFile = File(...)
+):
+    """Upload a new sticker"""
+    # Generate unique ID
+    sticker_id = f"sticker_{uuid.uuid4().hex[:8]}"
+    
+    # Save file
+    file_ext = Path(file.filename).suffix or ".png"
+    file_path = STICKERS_DIR / f"{sticker_id}{file_ext}"
+    
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Create sticker record
+    sticker = {
+        "id": sticker_id,
+        "name": name or file.filename,
+        "url": f"/api/static/stickers/{sticker_id}{file_ext}",
+        "category": category
+    }
+    
+    await db.stickers.insert_one(sticker)
+    
+    return {"success": True, "sticker": {k: v for k, v in sticker.items() if k != "_id"}}
+
+@api_router.delete("/admin/stickers/{sticker_id}")
+async def delete_sticker(sticker_id: str):
+    """Delete a sticker"""
+    sticker = await db.stickers.find_one({"id": sticker_id})
+    if sticker:
+        # Try to delete file
+        try:
+            url = sticker.get("url", "")
+            if "/api/static/stickers/" in url:
+                filename = url.split("/")[-1]
+                file_path = STICKERS_DIR / filename
+                if file_path.exists():
+                    file_path.unlink()
+        except:
+            pass
+    
+    result = await db.stickers.delete_one({"id": sticker_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Sticker not found")
+    return {"success": True}
+
+@api_router.post("/admin/stickers/url")
+async def add_sticker_url(name: str, url: str, category: str = "general"):
+    """Add a sticker from URL"""
+    sticker_id = f"sticker_{uuid.uuid4().hex[:8]}"
+    sticker = {
+        "id": sticker_id,
+        "name": name,
+        "url": url,
+        "category": category
+    }
+    await db.stickers.insert_one(sticker)
+    return {"success": True, "sticker": {k: v for k, v in sticker.items() if k != "_id"}}
+
+# Serve static files for uploaded stickers/frames
+from fastapi.staticfiles import StaticFiles
+
+# Mount static directory
+@api_router.get("/static/stickers/{filename}")
+async def serve_sticker(filename: str):
+    file_path = STICKERS_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
+
+@api_router.get("/static/frames/{filename}")
+async def serve_frame(filename: str):
+    file_path = FRAMES_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
+
 # Include the router in the main app
 app.include_router(api_router)
 
