@@ -1,0 +1,161 @@
+{
+  "project_name": "Power of Ten",
+  "design_philosophy": {
+    "theme": "Retro-Futurism / Y2K Electric",
+    "emotional_tone": "High-Energy, Playful, Interactive, Event-Focused",
+    "core_principles": [
+      "Motion is mandatory: Every step must feel alive.",
+      "Big & Bold: Controls must be touch-friendly (Kiosk mode).",
+      "Neon on Dark: High contrast for low-light event environments.",
+      "Flow over Function: The user journey is a single continuous stream."
+    ]
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Space Grotesk, sans-serif",
+      "body": "DM Sans, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-6xl md:text-8xl font-bold tracking-tighter uppercase",
+      "h2": "text-4xl md:text-5xl font-bold tracking-tight",
+      "h3": "text-2xl md:text-3xl font-semibold",
+      "body": "text-base md:text-lg leading-relaxed",
+      "caption": "text-sm font-medium tracking-wide uppercase opacity-70"
+    },
+    "imports": [
+      "@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Space+Grotesk:wght@300;500;700&display=swap');"
+    ]
+  },
+  "colors": {
+    "palette": {
+      "background": "#09090b",
+      "foreground": "#fafafa",
+      "primary": "#d946ef",
+      "primary_foreground": "#ffffff",
+      "secondary": "#06b6d4",
+      "secondary_foreground": "#ffffff",
+      "accent": "#facc15",
+      "accent_foreground": "#000000",
+      "muted": "#27272a",
+      "muted_foreground": "#a1a1aa",
+      "card": "#18181b",
+      "border": "#27272a"
+    },
+    "usage": {
+      "primary": "Main CTAs, Active States, Key Highlights",
+      "secondary": "Secondary Buttons, Sticker Borders, Info Badges",
+      "accent": "Warnings, Countdown Timer, 'New' Labels",
+      "background": "Global App Background (Always Dark)"
+    },
+    "gradients": {
+      "hero": "bg-gradient-to-r from-fuchsia-600 to-cyan-600",
+      "glass": "bg-white/5 backdrop-blur-xl border border-white/10"
+    }
+  },
+  "layout_strategies": {
+    "global": {
+      "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+      "spacing": "p-6 md:p-12",
+      "grid_marketing": "grid grid-cols-1 md:grid-cols-12 gap-8",
+      "grid_dashboard": "grid grid-cols-1 md:grid-cols-4 gap-4"
+    },
+    "pages": {
+      "template_selection": "Horizontal scroll or 2x2 grid of large card previews.",
+      "camera": "Full-viewport layout. 16:9 Camera feed center. Sidebar for recent photos.",
+      "decoration": "Canvas in center (80vh). Floating bottom bar for stickers.",
+      "result": "Split view: Left (Photo Strip + GIF loop), Right (QR Code + Actions)."
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "rounded-full bg-primary text-white hover:bg-primary/90 hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(217,70,239,0.5)]",
+      "secondary": "rounded-full border-2 border-primary/50 text-primary hover:bg-primary/10 transition-all",
+      "ghost": "text-muted-foreground hover:text-white hover:bg-white/5"
+    },
+    "cards": {
+      "default": "bg-zinc-900/50 border border-white/10 rounded-xl overflow-hidden hover:border-primary/50 transition-colors duration-300"
+    },
+    "camera_overlay": {
+      "countdown": "fixed inset-0 flex items-center justify-center text-[15rem] font-bold text-white drop-shadow-[0_0_50px_rgba(255,255,255,0.8)] z-50 pointer-events-none"
+    }
+  },
+  "motion": {
+    "library": "framer-motion",
+    "defaults": {
+      "page_transition": {
+        "initial": { "opacity": 0, "y": 20 },
+        "animate": { "opacity": 1, "y": 0 },
+        "exit": { "opacity": 0, "y": -20 },
+        "transition": { "duration": 0.4, "ease": "easeOut" }
+      },
+      "hover": {
+        "scale": 1.05,
+        "transition": { "duration": 0.2 }
+      }
+    }
+  },
+  "assets": {
+    "icons": "lucide-react",
+    "image_urls": {
+      "templates": [
+        {
+          "url": "https://images.unsplash.com/photo-1616627547584-bf28cee262db?q=80&w=1000&auto=format&fit=crop",
+          "category": "template_bg",
+          "description": "Abstract neon retro background for template 1"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop",
+          "category": "template_bg",
+          "description": "Cyberpunk city background for template 2"
+        }
+      ],
+      "stickers": [
+        {
+          "url": "https://cdn-icons-png.flaticon.com/512/748/748137.png",
+          "category": "sticker",
+          "description": "Retro sunglasses"
+        },
+        {
+          "url": "https://cdn-icons-png.flaticon.com/512/4213/4213652.png",
+          "category": "sticker",
+          "description": "Neon crown"
+        },
+        {
+          "url": "https://cdn-icons-png.flaticon.com/512/2663/2663067.png",
+          "category": "sticker",
+          "description": "Party hat"
+        }
+      ],
+      "placeholders": [
+        {
+          "url": "https://images.unsplash.com/photo-1520333789090-1afc82db536a?q=80&w=1000&auto=format&fit=crop",
+          "category": "camera_placeholder",
+          "description": "Person smiling in neon light"
+        }
+      ]
+    }
+  },
+  "instructions_to_main_agent": {
+    "step_1": "Setup Theme: Update tailwind.config.js with the neon color palette and add font imports to index.css.",
+    "step_2": "Component Customization: Update Shadcn Button and Card components to match the rounded-full and glassmorphism style defined in 'components' section.",
+    "step_3": "Routing: Set up React Router for the 4 main pages: / (Home/Templates), /capture, /decorate, /result.",
+    "step_4": "Page Construction: Build pages sequentially. Use Framer Motion for page transitions (AnimatePresence).",
+    "step_5": "Features: Implement the specific logic for each page (Mock Camera, Sticker Drag-n-Drop, QR Generation).",
+    "testing": "Add data-testid to all buttons (e.g., 'select-template-1', 'start-camera', 'capture-btn', 'download-qr')."
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You tend to converge toward generic outputs. Avoid this.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "You MUST NOT apply universal transition (transition: all).",
+    "You MUST NOT center align the app container (.App { text-align: center; }).",
+    "NEVER use AI assistant Emoji characters like 🤖 etc.",
+    "Every interaction needs micro-animations.",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Use 'sonner' for toasts.",
+    "Components MUST use named exports.",
+    "Pages MUST use default exports."
+  ]
+}
