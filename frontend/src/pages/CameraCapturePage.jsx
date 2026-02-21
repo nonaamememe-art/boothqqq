@@ -137,13 +137,13 @@ export default function CameraCapturePage() {
   return (
     <div className="h-screen w-screen overflow-hidden paper-bg flex">
       {/* Left Side - Camera Monitor & Snap Button */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 lg:p-8">
-        {/* Camera Monitor */}
+      <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-6">
+        {/* Camera Monitor - BIGGER */}
         <div 
           className="relative bg-white overflow-hidden rounded-lg shadow-lg border-4 border-gray-800"
           style={{ 
             width: "100%",
-            maxWidth: "900px",
+            maxWidth: "1100px",
             aspectRatio: "16/9"
           }}
           data-testid="camera-view"
