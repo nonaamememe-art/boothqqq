@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Lock, Upload, Trash2, Plus, Palette, Image, Save, X, Move } from "lucide-react";
+import { Lock, Upload, Trash2, Plus, Palette, Image, Save, X, Move, ZoomIn, ZoomOut } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 
@@ -16,6 +15,8 @@ const defaultPhotoSlots = [
   { x: 20, y: 354, width: 280, height: 157, rotation: 0 },
   { x: 20, y: 521, width: 280, height: 157, rotation: 0 }
 ];
+
+const slotColors = ['#ef4444', '#f97316', '#22c55e', '#3b82f6'];
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -36,12 +37,18 @@ export default function AdminPage() {
     photo_slots: [...defaultPhotoSlots]
   });
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [previewScale, setPreviewScale] = useState(1);
+
+  // Drag state
+  const [draggingSlot, setDraggingSlot] = useState(null);
+  const [resizingSlot, setResizingSlot] = useState(null);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const previewRef = useRef(null);
 
   // Stickers state
   const [stickers, setStickers] = useState([]);
   const [stickerUrl, setStickerUrl] = useState("");
   const [stickerName, setStickerName] = useState("");
-  const [stickerCategory, setStickerCategory] = useState("general");
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -100,22 +107,81 @@ export default function AdminPage() {
       } else {
         setNewTemplate({ ...newTemplate, template_image_url: res.data.url });
       }
-      toast.success("Template image uploaded!");
+      toast.success("Image uploaded!");
     } catch (error) {
-      toast.error("Failed to upload image");
+      toast.error("Failed to upload");
     } finally {
       setUploadingImage(false);
     }
   };
 
-  const updatePhotoSlot = (index, field, value) => {
-    const target = editingTemplate || newTemplate;
-    const setTarget = editingTemplate ? setEditingTemplate : setNewTemplate;
+  const currentTemplate = editingTemplate || newTemplate;
+  const setCurrentTemplate = editingTemplate ? setEditingTemplate : setNewTemplate;
+
+  // Drag handlers
+  const handleMouseDown = (e, index, isResize = false) => {
+    e.preventDefault();
+    e.stopPropagation();
     
-    const slots = [...(target.photo_slots || defaultPhotoSlots)];
-    slots[index] = { ...slots[index], [field]: parseInt(value) || 0 };
-    setTarget({ ...target, photo_slots: slots });
+    const rect = previewRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    setDragStart({
+      x: e.clientX,
+      y: e.clientY,
+      slotX: currentTemplate.photo_slots[index].x,
+      slotY: currentTemplate.photo_slots[index].y,
+      slotW: currentTemplate.photo_slots[index].width,
+      slotH: currentTemplate.photo_slots[index].height
+    });
+
+    if (isResize) {
+      setResizingSlot(index);
+    } else {
+      setDraggingSlot(index);
+    }
   };
+
+  const handleMouseMove = (e) => {
+    if (draggingSlot === null && resizingSlot === null) return;
+
+    const dx = (e.clientX - dragStart.x) / previewScale;
+    const dy = (e.clientY - dragStart.y) / previewScale;
+
+    const slots = [...currentTemplate.photo_slots];
+    
+    if (draggingSlot !== null) {
+      slots[draggingSlot] = {
+        ...slots[draggingSlot],
+        x: Math.max(0, Math.round(dragStart.slotX + dx)),
+        y: Math.max(0, Math.round(dragStart.slotY + dy))
+      };
+    } else if (resizingSlot !== null) {
+      slots[resizingSlot] = {
+        ...slots[resizingSlot],
+        width: Math.max(50, Math.round(dragStart.slotW + dx)),
+        height: Math.max(30, Math.round(dragStart.slotH + dy))
+      };
+    }
+
+    setCurrentTemplate({ ...currentTemplate, photo_slots: slots });
+  };
+
+  const handleMouseUp = () => {
+    setDraggingSlot(null);
+    setResizingSlot(null);
+  };
+
+  useEffect(() => {
+    if (draggingSlot !== null || resizingSlot !== null) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [draggingSlot, resizingSlot, dragStart]);
 
   const saveTemplate = async (template) => {
     try {
@@ -124,17 +190,12 @@ export default function AdminPage() {
       fetchTemplates();
       setEditingTemplate(null);
       setNewTemplate({
-        id: "",
-        name: "",
-        description: "",
-        background_color: "#ffffff",
-        frame_color: "#f3f4f6",
-        text_color: "#6b7280",
-        template_image_url: null,
-        photo_slots: [...defaultPhotoSlots]
+        id: "", name: "", description: "",
+        background_color: "#ffffff", frame_color: "#f3f4f6", text_color: "#6b7280",
+        template_image_url: null, photo_slots: [...defaultPhotoSlots]
       });
     } catch (error) {
-      toast.error("Failed to save template");
+      toast.error("Failed to save");
     }
   };
 
@@ -142,10 +203,10 @@ export default function AdminPage() {
     if (!confirm("Delete this template?")) return;
     try {
       await axios.delete(`${API}/admin/templates/${templateId}`);
-      toast.success("Template deleted!");
+      toast.success("Deleted!");
       fetchTemplates();
     } catch (error) {
-      toast.error("Failed to delete template");
+      toast.error("Failed to delete");
     }
   };
 
@@ -165,34 +226,34 @@ export default function AdminPage() {
       toast.success("Sticker uploaded!");
       fetchStickers();
     } catch (error) {
-      toast.error("Failed to upload sticker");
+      toast.error("Failed to upload");
     }
   };
 
   const addStickerFromUrl = async () => {
     if (!stickerUrl || !stickerName) {
-      toast.error("Please enter name and URL");
+      toast.error("Enter name and URL");
       return;
     }
     try {
-      await axios.post(`${API}/admin/stickers/url?name=${encodeURIComponent(stickerName)}&url=${encodeURIComponent(stickerUrl)}&category=${stickerCategory}`);
-      toast.success("Sticker added!");
+      await axios.post(`${API}/admin/stickers/url?name=${encodeURIComponent(stickerName)}&url=${encodeURIComponent(stickerUrl)}&category=general`);
+      toast.success("Added!");
       fetchStickers();
       setStickerUrl("");
       setStickerName("");
     } catch (error) {
-      toast.error("Failed to add sticker");
+      toast.error("Failed");
     }
   };
 
   const deleteSticker = async (stickerId) => {
-    if (!confirm("Delete this sticker?")) return;
+    if (!confirm("Delete?")) return;
     try {
       await axios.delete(`${API}/admin/stickers/${stickerId}`);
-      toast.success("Sticker deleted!");
+      toast.success("Deleted!");
       fetchStickers();
     } catch (error) {
-      toast.error("Failed to delete sticker");
+      toast.error("Failed");
     }
   };
 
@@ -205,59 +266,46 @@ export default function AdminPage() {
   // Login Screen
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center paper-bg">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md px-6"
-        >
-          <Card className="sketch-border">
-            <CardHeader className="text-center">
-              <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Lock className="w-8 h-8 text-pink-500" />
-              </div>
-              <CardTitle className="text-2xl" style={{ fontFamily: 'var(--font-heading)' }}>
-                Admin Panel
-              </CardTitle>
-              <p className="text-gray-500" style={{ fontFamily: 'var(--font-handwritten)' }}>
-                Enter password to continue
-              </p>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="text-center text-lg"
-                  data-testid="admin-password-input"
-                />
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full btn-sketch bg-pink-400 hover:bg-pink-500 text-white"
-                  data-testid="admin-login-btn"
-                >
-                  {loading ? "Checking..." : "Login"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-pink-500" />
+            </div>
+            <CardTitle className="text-2xl font-bold">Admin Panel</CardTitle>
+            <p className="text-gray-500 text-sm">Enter password to continue</p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="text-center text-lg"
+                data-testid="admin-password-input"
+              />
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-pink-500 hover:bg-pink-600 text-white font-medium"
+                data-testid="admin-login-btn"
+              >
+                {loading ? "Checking..." : "Login"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const currentTemplate = editingTemplate || newTemplate;
-  const setCurrentTemplate = editingTemplate ? setEditingTemplate : setNewTemplate;
-
   // Admin Dashboard
   return (
-    <div className="min-h-screen paper-bg">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: 'var(--font-heading)' }}>
+      <header className="bg-white border-b px-6 py-4 flex items-center justify-between shadow-sm">
+        <h1 className="text-2xl font-bold text-gray-800">
           🎨 Admin Panel
         </h1>
         <Button variant="outline" onClick={() => setIsAuthenticated(false)}>
@@ -269,151 +317,172 @@ export default function AdminPage() {
       <main className="p-6 max-w-7xl mx-auto">
         <Tabs defaultValue="templates" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="templates" className="flex items-center gap-2">
+            <TabsTrigger value="templates" className="flex items-center gap-2 font-medium">
               <Palette className="w-4 h-4" /> Templates
             </TabsTrigger>
-            <TabsTrigger value="stickers" className="flex items-center gap-2">
+            <TabsTrigger value="stickers" className="flex items-center gap-2 font-medium">
               <Image className="w-4 h-4" /> Stickers
             </TabsTrigger>
           </TabsList>
 
           {/* Templates Tab */}
           <TabsContent value="templates" className="space-y-6">
-            {/* Template Editor */}
-            <Card className="sketch-border">
+            <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {editingTemplate ? "✏️ Edit Template" : "➕ Add New Template"}
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  {editingTemplate ? "✏️ Edit Template" : "➕ New Template"}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Input
-                    placeholder="Template ID (e.g., my-template)"
-                    value={currentTemplate.id}
-                    onChange={(e) => setCurrentTemplate({ ...currentTemplate, id: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-                    disabled={!!editingTemplate}
-                  />
-                  <Input
-                    placeholder="Template Name"
-                    value={currentTemplate.name}
-                    onChange={(e) => setCurrentTemplate({ ...currentTemplate, name: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Description"
-                    value={currentTemplate.description}
-                    onChange={(e) => setCurrentTemplate({ ...currentTemplate, description: e.target.value })}
-                  />
-                </div>
-
-                {/* Template Image Upload */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                    <Upload className="w-5 h-5" /> Template Image (from Photoshop)
-                  </h3>
-                  
-                  <div className="flex items-start gap-6">
-                    {/* Upload Area */}
-                    <div className="flex-1">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={uploadTemplateImage}
-                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
-                      />
-                      <p className="text-xs text-gray-500 mt-2">
-                        Upload your PSD export (PNG/JPG). Recommended size: 320x700px for 2x6 strip
-                      </p>
-                      {uploadingImage && <p className="text-sm text-pink-500 mt-2">Uploading...</p>}
-                    </div>
-
-                    {/* Preview */}
-                    {currentTemplate.template_image_url && (
-                      <div className="relative">
-                        <img
-                          src={getImageUrl(currentTemplate.template_image_url)}
-                          alt="Template preview"
-                          className="h-48 object-contain border rounded"
-                        />
-                        <button
-                          onClick={() => setCurrentTemplate({ ...currentTemplate, template_image_url: null })}
-                          className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Template ID</label>
+                    <Input
+                      placeholder="e.g., my-template"
+                      value={currentTemplate.id}
+                      onChange={(e) => setCurrentTemplate({ ...currentTemplate, id: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                      disabled={!!editingTemplate}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Template Name</label>
+                    <Input
+                      placeholder="My Custom Template"
+                      value={currentTemplate.name}
+                      onChange={(e) => setCurrentTemplate({ ...currentTemplate, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <Input
+                      placeholder="Brief description"
+                      value={currentTemplate.description}
+                      onChange={(e) => setCurrentTemplate({ ...currentTemplate, description: e.target.value })}
+                    />
                   </div>
                 </div>
 
-                {/* Photo Slots Configuration */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                {/* Template Image & Visual Editor */}
+                <div className="border rounded-lg p-6 bg-gray-50">
                   <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                    <Move className="w-5 h-5" /> Photo Slot Positions (4 photos)
+                    <Upload className="w-5 h-5" /> Template Image
                   </h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Set X, Y position and Width, Height for each photo slot on your template
-                  </p>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {(currentTemplate.photo_slots || defaultPhotoSlots).map((slot, index) => (
-                      <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium text-sm mb-3 text-pink-600">📷 Photo {index + 1}</h4>
-                        <div className="grid grid-cols-4 gap-2">
-                          <div>
-                            <label className="text-xs text-gray-500">X</label>
-                            <Input
-                              type="number"
-                              value={slot.x}
-                              onChange={(e) => updatePhotoSlot(index, 'x', e.target.value)}
-                              className="text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-500">Y</label>
-                            <Input
-                              type="number"
-                              value={slot.y}
-                              onChange={(e) => updatePhotoSlot(index, 'y', e.target.value)}
-                              className="text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-500">Width</label>
-                            <Input
-                              type="number"
-                              value={slot.width}
-                              onChange={(e) => updatePhotoSlot(index, 'width', e.target.value)}
-                              className="text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-500">Height</label>
-                            <Input
-                              type="number"
-                              value={slot.height}
-                              onChange={(e) => updatePhotoSlot(index, 'height', e.target.value)}
-                              className="text-sm"
-                            />
-                          </div>
+                  <div className="mb-4">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={uploadTemplateImage}
+                      className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-medium file:bg-pink-100 file:text-pink-700 hover:file:bg-pink-200 cursor-pointer"
+                    />
+                    {uploadingImage && <p className="text-sm text-pink-500 mt-2">Uploading...</p>}
+                  </div>
+
+                  {/* Visual Editor */}
+                  {currentTemplate.template_image_url && (
+                    <div className="mt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-medium text-gray-700">
+                          📐 Drag photo slots to position them
+                        </h4>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => setPreviewScale(s => Math.max(0.5, s - 0.1))}>
+                            <ZoomOut className="w-4 h-4" />
+                          </Button>
+                          <span className="text-sm font-medium w-16 text-center">{Math.round(previewScale * 100)}%</span>
+                          <Button size="sm" variant="outline" onClick={() => setPreviewScale(s => Math.min(2, s + 0.1))}>
+                            <ZoomIn className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                  </div>
+
+                      <div className="border rounded-lg p-4 bg-white overflow-auto" style={{ maxHeight: '600px' }}>
+                        <div
+                          ref={previewRef}
+                          className="relative inline-block"
+                          style={{ transform: `scale(${previewScale})`, transformOrigin: 'top left' }}
+                        >
+                          <img
+                            src={getImageUrl(currentTemplate.template_image_url)}
+                            alt="Template"
+                            className="block"
+                            draggable={false}
+                          />
+                          
+                          {/* Photo Slots */}
+                          {(currentTemplate.photo_slots || defaultPhotoSlots).map((slot, index) => (
+                            <div
+                              key={index}
+                              className="absolute border-2 cursor-move flex items-center justify-center"
+                              style={{
+                                left: slot.x,
+                                top: slot.y,
+                                width: slot.width,
+                                height: slot.height,
+                                borderColor: slotColors[index],
+                                backgroundColor: `${slotColors[index]}33`,
+                              }}
+                              onMouseDown={(e) => handleMouseDown(e, index, false)}
+                            >
+                              <span 
+                                className="font-bold text-white px-2 py-1 rounded text-sm"
+                                style={{ backgroundColor: slotColors[index] }}
+                              >
+                                Photo {index + 1}
+                              </span>
+                              
+                              {/* Resize Handle */}
+                              <div
+                                className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+                                style={{ backgroundColor: slotColors[index] }}
+                                onMouseDown={(e) => handleMouseDown(e, index, true)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Slot Values Display */}
+                      <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {(currentTemplate.photo_slots || defaultPhotoSlots).map((slot, index) => (
+                          <div 
+                            key={index} 
+                            className="p-3 rounded-lg text-sm"
+                            style={{ backgroundColor: `${slotColors[index]}15`, borderLeft: `4px solid ${slotColors[index]}` }}
+                          >
+                            <div className="font-bold mb-1" style={{ color: slotColors[index] }}>Photo {index + 1}</div>
+                            <div className="text-gray-600 grid grid-cols-2 gap-1 text-xs">
+                              <span>X: {slot.x}</span>
+                              <span>Y: {slot.y}</span>
+                              <span>W: {slot.width}</span>
+                              <span>H: {slot.height}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!currentTemplate.template_image_url && (
+                    <div className="text-center py-12 text-gray-400">
+                      <Image className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p>Upload a template image to start positioning photo slots</p>
+                    </div>
+                  )}
                 </div>
 
-                {/* Fallback Colors (if no image) */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                  <h3 className="font-bold text-lg mb-4">🎨 Fallback Colors (used if no image)</h3>
+                {/* Fallback Colors */}
+                <div className="border rounded-lg p-6 bg-gray-50">
+                  <h3 className="font-bold text-lg mb-4">🎨 Fallback Colors (if no image)</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm text-gray-600 w-32">Background:</label>
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm font-medium text-gray-700 w-28">Background:</label>
                       <input
                         type="color"
                         value={currentTemplate.background_color}
                         onChange={(e) => setCurrentTemplate({ ...currentTemplate, background_color: e.target.value })}
-                        className="w-10 h-10 rounded cursor-pointer"
+                        className="w-10 h-10 rounded cursor-pointer border"
                       />
                       <Input
                         value={currentTemplate.background_color}
@@ -421,13 +490,13 @@ export default function AdminPage() {
                         className="flex-1"
                       />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm text-gray-600 w-32">Frame Color:</label>
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm font-medium text-gray-700 w-28">Frame:</label>
                       <input
                         type="color"
                         value={currentTemplate.frame_color}
                         onChange={(e) => setCurrentTemplate({ ...currentTemplate, frame_color: e.target.value })}
-                        className="w-10 h-10 rounded cursor-pointer"
+                        className="w-10 h-10 rounded cursor-pointer border"
                       />
                       <Input
                         value={currentTemplate.frame_color}
@@ -438,20 +507,17 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
+                {/* Actions */}
                 <div className="flex gap-3">
                   <Button
                     onClick={() => saveTemplate(currentTemplate)}
                     disabled={!currentTemplate.id || !currentTemplate.name}
-                    className="btn-sketch bg-pink-400 hover:bg-pink-500 text-white"
+                    className="bg-pink-500 hover:bg-pink-600 text-white font-medium"
                   >
                     <Save className="w-4 h-4 mr-2" /> Save Template
                   </Button>
                   {editingTemplate && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setEditingTemplate(null)}
-                    >
+                    <Button variant="outline" onClick={() => setEditingTemplate(null)}>
                       Cancel
                     </Button>
                   )}
@@ -463,10 +529,10 @@ export default function AdminPage() {
             <h3 className="text-xl font-bold text-gray-700">Existing Templates</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {templates.map((template) => (
-                <Card key={template.id} className="sketch-border overflow-hidden">
+                <Card key={template.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div
                     className="h-40 flex items-center justify-center relative"
-                    style={{ backgroundColor: template.background_color }}
+                    style={{ backgroundColor: template.background_color || '#f3f4f6' }}
                   >
                     {template.template_image_url ? (
                       <img
@@ -475,10 +541,10 @@ export default function AdminPage() {
                         className="h-full object-contain"
                       />
                     ) : (
-                      <div
-                        className="w-24 h-16 rounded"
-                        style={{ backgroundColor: template.frame_color }}
-                      />
+                      <div className="text-gray-400 text-center">
+                        <Palette className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <span className="text-sm">Color Only</span>
+                      </div>
                     )}
                   </div>
                   <CardContent className="p-4">
@@ -512,31 +578,25 @@ export default function AdminPage() {
 
           {/* Stickers Tab */}
           <TabsContent value="stickers" className="space-y-6">
-            {/* Upload Sticker */}
-            <Card className="sketch-border">
+            <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
                   <Upload className="w-5 h-5" /> Add Stickers
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* File Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Upload Image File
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Upload Image File</label>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={uploadSticker}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+                    className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-medium file:bg-pink-100 file:text-pink-700 hover:file:bg-pink-200 cursor-pointer"
                   />
                 </div>
 
                 <div className="border-t pt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Or Add from URL
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Or Add from URL</label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <Input
                       placeholder="Sticker Name"
@@ -548,10 +608,7 @@ export default function AdminPage() {
                       value={stickerUrl}
                       onChange={(e) => setStickerUrl(e.target.value)}
                     />
-                    <Button
-                      onClick={addStickerFromUrl}
-                      className="btn-sketch bg-pink-400 hover:bg-pink-500 text-white"
-                    >
+                    <Button onClick={addStickerFromUrl} className="bg-pink-500 hover:bg-pink-600 text-white">
                       <Plus className="w-4 h-4 mr-2" /> Add
                     </Button>
                   </div>
@@ -559,10 +616,10 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
-            {/* Existing Stickers */}
+            {/* Stickers Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {stickers.map((sticker) => (
-                <Card key={sticker.id} className="sketch-border overflow-hidden group">
+                <Card key={sticker.id} className="overflow-hidden group shadow-sm hover:shadow-md transition-shadow">
                   <div className="aspect-square bg-gray-50 flex items-center justify-center p-4 relative">
                     <img
                       src={getImageUrl(sticker.url)}
@@ -578,7 +635,6 @@ export default function AdminPage() {
                   </div>
                   <CardContent className="p-2 text-center">
                     <p className="text-sm font-medium truncate">{sticker.name}</p>
-                    <p className="text-xs text-gray-400">{sticker.category}</p>
                   </CardContent>
                 </Card>
               ))}
