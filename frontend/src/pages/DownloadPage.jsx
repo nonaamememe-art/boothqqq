@@ -63,11 +63,13 @@ export default function DownloadPage() {
   };
 
   const handleDownloadImage = () => {
-    window.open(`${API.replace('/api', '')}/api/download/${sessionId}/image`, '_blank');
+    const id = resolvedSessionId || sessionId || shortId;
+    window.open(`${API.replace('/api', '')}/api/download/${id}/image`, '_blank');
   };
 
   const handleDownloadVideo = () => {
-    window.open(`${API.replace('/api', '')}/api/download/${sessionId}/gif`, '_blank');
+    const id = resolvedSessionId || sessionId || shortId;
+    window.open(`${API.replace('/api', '')}/api/download/${id}/gif`, '_blank');
   };
 
   const handleDownloadPhoto = (index) => {
