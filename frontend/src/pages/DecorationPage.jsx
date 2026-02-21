@@ -322,7 +322,7 @@ export default function DecorationPage() {
               ref={canvasRef}
               className="decoration-canvas relative p-4"
               style={{
-                width: "300px",
+                width: "400px",
                 backgroundColor: template?.background_color || "#f8fafc"
               }}
               onClick={(e) => {
@@ -332,8 +332,8 @@ export default function DecorationPage() {
               }}
               data-testid="decoration-canvas"
             >
-              {/* Photo Frames */}
-              <div className="flex flex-col gap-3">
+              {/* Photo Frames - Square 1080x1080 layout */}
+              <div className="grid grid-cols-2 gap-3">
                 {photos.map((photo, index) => (
                   <div
                     key={index}
