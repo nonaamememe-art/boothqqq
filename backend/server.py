@@ -16,6 +16,8 @@ from io import BytesIO
 import imageio
 from PIL import Image
 import json
+import random
+import string
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -36,10 +38,16 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # Define Models
+def generate_short_id(length=7):
+    """Generate a short alphanumeric ID like '26454n5'"""
+    chars = string.ascii_lowercase + string.digits
+    return ''.join(random.choice(chars) for _ in range(length))
+
 class PhotoSession(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    short_id: str = Field(default_factory=lambda: generate_short_id())
     template_id: str
     photos: List[str] = []  # Base64 encoded photos
     stickers: List[dict] = []  # Sticker positions and data
@@ -135,7 +143,7 @@ async def create_session(request: CreateSessionRequest):
     doc = session.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     await db.sessions.insert_one(doc)
-    return {"session_id": session.id, "template_id": session.template_id}
+    return {"session_id": session.id, "short_id": session.short_id, "template_id": session.template_id}
 
 @api_router.get("/sessions/{session_id}")
 async def get_session(session_id: str):
@@ -255,14 +263,15 @@ async def download_gif(session_id: str):
 @api_router.get("/qrcode/{session_id}")
 async def generate_qrcode(session_id: str):
     """Generate QR code for download page"""
-    session = await db.sessions.find_one({"id": session_id})
+    session = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
     # Get share URL from environment - configurable for custom domain
-    # For dev: use full frontend URL, for prod: use short URL like fotoshare.co/i/xxxx
-    share_base_url = os.environ.get('SHARE_BASE_URL', 'https://filter-frame-lab.preview.emergentagent.com/download')
-    download_url = f"{share_base_url}/{session_id}"
+    # Format: https://fotoshare.co/i/26454n5
+    share_base_url = os.environ.get('SHARE_BASE_URL', 'https://filter-frame-lab.preview.emergentagent.com/i')
+    short_id = session.get('short_id', session_id[:7])
+    download_url = f"{share_base_url}/{short_id}"
     
     # Generate QR code
     qr = qrcode.QRCode(
@@ -287,19 +296,16 @@ async def get_share_data(session_id: str):
     # Try full ID first
     session = await db.sessions.find_one({"id": session_id}, {"_id": 0})
     
-    # If not found, try matching by short ID (first 8 chars)
+    # If not found, try short_id
     if not session:
-        # Search for session starting with this short ID
-        session = await db.sessions.find_one(
-            {"id": {"$regex": f"^{session_id}"}}, 
-            {"_id": 0}
-        )
+        session = await db.sessions.find_one({"short_id": session_id}, {"_id": 0})
     
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
     return {
         "session_id": session.get("id"),
+        "short_id": session.get("short_id"),
         "status": session.get("status"),
         "template_id": session.get("template_id"),
         "photo_count": len(session.get("photos", [])),
@@ -310,13 +316,10 @@ async def get_share_data(session_id: str):
 @api_router.get("/resolve/{short_id}")
 async def resolve_short_id(short_id: str):
     """Resolve short ID to full session ID"""
-    session = await db.sessions.find_one(
-        {"id": {"$regex": f"^{short_id}"}}, 
-        {"_id": 0, "id": 1}
-    )
+    session = await db.sessions.find_one({"short_id": short_id}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    return {"session_id": session.get("id")}
+    return {"session_id": session.get("id"), "short_id": session.get("short_id")}
 
 # Include the router in the main app
 app.include_router(api_router)
