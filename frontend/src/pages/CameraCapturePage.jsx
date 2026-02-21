@@ -215,13 +215,12 @@ export default function CameraCapturePage() {
       </div>
 
       {/* Right Panel - Preview & Button */}
-      <div className="lg:w-[320px] flex flex-row lg:flex-col p-4 lg:p-6 gap-4 lg:gap-6 bg-[#fef9f3] lg:bg-transparent">
+      <div className="lg:w-[280px] flex flex-row lg:flex-col p-4 lg:p-6 gap-4 lg:gap-6 bg-[#fef9f3] lg:bg-transparent">
         {/* Photo Strip Preview */}
         <div 
-          className="sketch-border flex-1 lg:flex-1 p-3 lg:p-4 bg-white"
+          className="sketch-border p-3 lg:p-4 bg-white"
           style={{ 
             backgroundColor: template?.background_color || '#ffffff',
-            transform: 'rotate(0deg)'
           }}
         >
           <h3 
@@ -231,11 +230,11 @@ export default function CameraCapturePage() {
             📸 Your Strip
           </h3>
           
-          <div className="flex flex-row lg:flex-col gap-2 lg:gap-3">
+          <div className="flex flex-col gap-2">
             {[0, 1, 2, 3].map((index) => (
               <div
                 key={index}
-                className="flex-1 lg:flex-none rounded overflow-hidden border-2 border-dashed"
+                className="w-full rounded overflow-hidden border-2 border-dashed"
                 style={{ 
                   aspectRatio: "16/9",
                   borderColor: template?.id === 'modern-dark' ? '#374151' : '#d1d5db',
