@@ -31,16 +31,31 @@ export default function ShortUrlPage() {
       const sessionPhotos = sessionRes.data.photos || [];
       const mediaItems = [];
       
+      // Add individual photos first
       sessionPhotos.forEach((photo, idx) => {
-        mediaItems.push({ type: 'photo', src: photo, label: `Photo ${idx + 1}` });
+        mediaItems.push({ 
+          type: 'photo', 
+          src: `${API.replace('/api', '')}${photo}`, 
+          label: `Photo ${idx + 1}` 
+        });
       });
       
+      // Add photo strip
       if (sessionRes.data.final_image_url) {
-        mediaItems.push({ type: 'strip', src: `${API.replace('/api', '')}${sessionRes.data.final_image_url}`, label: 'Photo Strip' });
+        mediaItems.push({ 
+          type: 'strip', 
+          src: `${API.replace('/api', '')}${sessionRes.data.final_image_url}`, 
+          label: 'Photo Strip' 
+        });
       }
       
+      // Add video
       if (sessionRes.data.video_url) {
-        mediaItems.push({ type: 'video', src: `${API.replace('/api', '')}${sessionRes.data.video_url}`, label: 'Video' });
+        mediaItems.push({ 
+          type: 'video', 
+          src: `${API.replace('/api', '')}${sessionRes.data.video_url}`, 
+          label: 'Video' 
+        });
       }
       
       setAllMedia(mediaItems);
@@ -66,14 +81,20 @@ export default function ShortUrlPage() {
       const link = document.createElement('a');
       link.href = currentMedia.src;
       link.download = `photo-${currentIndex + 1}.jpg`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     }
   };
 
   const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Power of Ten', url: window.location.href });
+        await navigator.share({ 
+          title: 'Power of Ten Photos', 
+          text: 'Check out my photos!',
+          url: window.location.href 
+        });
       } catch (e) {
         if (e.name !== 'AbortError') {
           navigator.clipboard.writeText(window.location.href);
@@ -88,7 +109,7 @@ export default function ShortUrlPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="w-12 h-12 border-4 border-pink-400 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -96,7 +117,7 @@ export default function ShortUrlPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
         <p className="text-xl text-gray-600">{error}</p>
       </div>
     );
@@ -105,27 +126,27 @@ export default function ShortUrlPage() {
   const currentMedia = allMedia[currentIndex];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Mobile Header */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white border-b safe-area-top">
-        <h1 className="text-lg font-bold text-gray-800" style={{ fontFamily: 'var(--font-heading)' }}>
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      {/* Header */}
+      <header className="flex items-center justify-between px-4 py-3 bg-white border-b">
+        <h1 className="text-xl font-bold text-gray-800" style={{ fontFamily: 'var(--font-heading)' }}>
           Power of Ten
         </h1>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={handleDownload} className="p-2">
-            <Download className="w-5 h-5" />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={handleDownload} className="p-2 hover:bg-gray-100">
+            <Download className="w-6 h-6 text-gray-700" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleShare} className="p-2">
-            <Share2 className="w-5 h-5" />
+          <Button variant="ghost" size="sm" onClick={handleShare} className="p-2 hover:bg-gray-100">
+            <Share2 className="w-6 h-6 text-gray-700" />
           </Button>
         </div>
       </header>
 
       {/* Main Preview */}
-      <main className="flex-1 flex items-center justify-center relative bg-black">
+      <main className="flex-1 flex items-center justify-center relative bg-white">
         {allMedia.length > 1 && (
-          <button onClick={handlePrev} className="absolute left-2 z-10 p-2 text-white/70 active:text-white">
-            <ChevronLeft className="w-8 h-8" />
+          <button onClick={handlePrev} className="absolute left-2 z-10 p-2 text-gray-400 hover:text-gray-700">
+            <ChevronLeft className="w-10 h-10" strokeWidth={2} />
           </button>
         )}
 
@@ -136,7 +157,8 @@ export default function ShortUrlPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full h-full flex items-center justify-center p-2"
+              className="w-full h-full flex items-center justify-center p-4"
+              style={{ maxHeight: 'calc(100vh - 200px)' }}
             >
               {currentMedia.type === 'video' ? (
                 <video
@@ -146,13 +168,15 @@ export default function ShortUrlPage() {
                   muted
                   playsInline
                   controls
-                  className="max-w-full max-h-full object-contain rounded-lg"
+                  className="max-w-full max-h-full object-contain"
+                  style={{ maxHeight: 'calc(100vh - 220px)' }}
                 />
               ) : (
                 <img
                   src={currentMedia.src}
                   alt={currentMedia.label}
-                  className="max-w-full max-h-full object-contain rounded-lg"
+                  className="max-w-full max-h-full object-contain"
+                  style={{ maxHeight: 'calc(100vh - 220px)' }}
                 />
               )}
             </motion.div>
@@ -160,31 +184,38 @@ export default function ShortUrlPage() {
         </AnimatePresence>
 
         {allMedia.length > 1 && (
-          <button onClick={handleNext} className="absolute right-2 z-10 p-2 text-white/70 active:text-white">
-            <ChevronRight className="w-8 h-8" />
+          <button onClick={handleNext} className="absolute right-2 z-10 p-2 text-gray-400 hover:text-gray-700">
+            <ChevronRight className="w-10 h-10" strokeWidth={2} />
           </button>
         )}
 
         {/* Counter */}
-        <div className="absolute top-3 right-3 px-2 py-1 bg-black/60 rounded-full text-white text-xs">
-          {currentIndex + 1}/{allMedia.length}
-        </div>
+        {allMedia.length > 0 && (
+          <div className="absolute top-4 right-4 px-3 py-1.5 bg-black/60 rounded-full text-white text-sm font-medium">
+            {currentIndex + 1}/{allMedia.length}
+          </div>
+        )}
       </main>
 
       {/* Thumbnail Gallery */}
-      <div className="bg-white border-t py-3 px-2 safe-area-bottom">
-        <div className="flex items-center justify-start gap-2 overflow-x-auto pb-1">
+      <div className="bg-gray-100 py-4 px-2 border-t">
+        <div className="flex items-center justify-start gap-3 overflow-x-auto pb-2 px-2">
           {allMedia.map((media, index) => (
             <button
               key={index}
               onClick={() => setCurrentIndex(index)}
-              className={`flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
-                index === currentIndex ? 'border-pink-400' : 'border-transparent opacity-60'
+              className={`flex-shrink-0 rounded-lg overflow-hidden border-3 transition-all ${
+                index === currentIndex 
+                  ? 'border-gray-800 ring-2 ring-gray-600' 
+                  : 'border-transparent opacity-70 hover:opacity-100'
               }`}
-              style={{ width: media.type === 'strip' ? '32px' : '56px', height: '56px' }}
+              style={{ 
+                width: media.type === 'strip' ? '60px' : '100px', 
+                height: media.type === 'strip' ? '120px' : '75px' 
+              }}
             >
               {media.type === 'video' ? (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-lg">🎬</div>
+                <div className="w-full h-full bg-gray-300 flex items-center justify-center text-2xl">🎬</div>
               ) : (
                 <img src={media.src} alt={media.label} className="w-full h-full object-cover" />
               )}
