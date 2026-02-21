@@ -6,10 +6,11 @@ import CameraCapturePage from "@/pages/CameraCapturePage";
 import DecorationPage from "@/pages/DecorationPage";
 import ResultPage from "@/pages/ResultPage";
 import DownloadPage from "@/pages/DownloadPage";
+import ShortUrlPage from "@/pages/ShortUrlPage";
 
 function App() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen paper-bg">
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<TemplateSelectionPage />} />
@@ -17,6 +18,7 @@ function App() {
           <Route path="/decorate/:sessionId" element={<DecorationPage />} />
           <Route path="/result/:sessionId" element={<ResultPage />} />
           <Route path="/download/:sessionId" element={<DownloadPage />} />
+          <Route path="/i/:shortId" element={<ShortUrlPage />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-center" />
