@@ -2,9 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Download, Image, Film, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
+import { Download, Image, Film, Home } from "lucide-react";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -15,6 +13,7 @@ export default function DownloadPage() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   useEffect(() => {
     fetchSession();
@@ -24,6 +23,10 @@ export default function DownloadPage() {
     try {
       const response = await axios.get(`${API}/share/${sessionId}`);
       setSession(response.data);
+      // Set the photo strip as default selected
+      if (response.data.photobooth_image_url) {
+        setSelectedPhoto({ type: 'strip', url: response.data.photobooth_image_url });
+      }
     } catch (error) {
       console.error("Error fetching session:", error);
       setError("Photo session not found or has expired");
@@ -36,16 +39,30 @@ export default function DownloadPage() {
     window.open(`${API.replace('/api', '')}/api/download/${sessionId}/image`, '_blank');
   };
 
-  const handleDownloadGif = () => {
+  const handleDownloadVideo = () => {
     window.open(`${API.replace('/api', '')}/api/download/${sessionId}/gif`, '_blank');
+  };
+
+  const handleDownloadPhoto = (index) => {
+    if (session?.photos?.[index]) {
+      const link = document.createElement('a');
+      link.href = `${API.replace('/api', '')}${session.photos[index]}`;
+      link.download = `photo_${index + 1}.jpg`;
+      link.click();
+    }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <div className="min-h-screen flex items-center justify-center paper-bg">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-600">Loading your photos...</p>
+          <div className="w-16 h-16 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-6" />
+          <p 
+            className="text-2xl text-gray-600"
+            style={{ fontFamily: 'var(--font-handwritten)' }}
+          >
+            Loading your photos...
+          </p>
         </div>
       </div>
     );
@@ -53,21 +70,28 @@ export default function DownloadPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <div className="min-h-screen flex items-center justify-center paper-bg">
         <div className="text-center max-w-md mx-auto px-6">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Oops!</h2>
-          <p className="text-slate-600 mb-6">{error}</p>
+          <div className="text-8xl mb-6">😢</div>
+          <h2 
+            className="text-4xl font-bold text-gray-800 mb-4"
+            style={{ fontFamily: 'var(--font-heading)' }}
+          >
+            Oops!
+          </h2>
+          <p 
+            className="text-xl text-gray-600 mb-8"
+            style={{ fontFamily: 'var(--font-handwritten)' }}
+          >
+            {error}
+          </p>
           <Button
             onClick={() => window.location.href = '/'}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="btn-sketch bg-pink-400 hover:bg-pink-500 text-white text-xl px-8 py-4"
             data-testid="create-new-btn"
           >
-            Create Your Own Photo Strip
+            <Home className="w-6 h-6 mr-2" />
+            Go Home
           </Button>
         </div>
       </div>
@@ -75,125 +99,168 @@ export default function DownloadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div className="min-h-screen paper-bg">
       {/* Header */}
-      <header className="py-6 px-6 text-center">
+      <header className="py-4 sm:py-6 text-center">
         <h1 
-          className="text-3xl font-bold text-slate-900"
+          className="text-4xl sm:text-5xl font-bold text-gray-800"
           style={{ fontFamily: 'var(--font-heading)' }}
           data-testid="download-page-title"
         >
           Power of Ten
         </h1>
-        <p className="text-slate-600 mt-1">Photo Booth</p>
+        <div 
+          className="h-1.5 bg-pink-400 mx-auto mt-2"
+          style={{ width: '150px', borderRadius: '255px 15px 225px 15px/15px 225px 15px 255px' }}
+        />
+        <p 
+          className="text-lg sm:text-xl text-gray-500 mt-2"
+          style={{ fontFamily: 'var(--font-handwritten)' }}
+        >
+          Your photos are ready! ✨
+        </p>
       </header>
 
       {/* Main Content */}
-      <main className="px-6 pb-12">
-        <div className="max-w-lg mx-auto">
+      <main className="px-4 sm:px-6 pb-8">
+        <div className="max-w-md mx-auto">
+          
+          {/* Large Preview */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
+            className="sketch-border bg-white p-3 sm:p-4 mb-4"
           >
-            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Image className="w-10 h-10 text-blue-600" />
+            <div 
+              className="w-full rounded overflow-hidden bg-gray-100"
+              style={{ aspectRatio: selectedPhoto?.type === 'strip' ? '2/6' : '16/9' }}
+            >
+              {selectedPhoto ? (
+                <img 
+                  src={selectedPhoto.type === 'strip' 
+                    ? `${API.replace('/api', '')}${selectedPhoto.url}`
+                    : `${API.replace('/api', '')}${selectedPhoto.url}`
+                  } 
+                  alt="Preview" 
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Image className="w-12 h-12 text-gray-300" />
+                </div>
+              )}
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
-              Your Photos Are Ready!
-            </h2>
-            <p className="text-slate-600">
-              Download your photo strip and animated GIF below
-            </p>
           </motion.div>
 
-          {/* Download Cards */}
-          <div className="space-y-4">
-            {/* Photo Strip Download */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
+          {/* Photo Thumbnails */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-6"
+          >
+            <h3 
+              className="text-xl font-bold text-gray-700 mb-3 text-center"
+              style={{ fontFamily: 'var(--font-heading)' }}
             >
-              <Card className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Image className="w-7 h-7 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-slate-800">Photo Strip</h3>
-                      <p className="text-sm text-slate-500">High-quality decorated image</p>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleDownloadImage}
-                    className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
-                    size="lg"
-                    data-testid="public-download-image-btn"
-                  >
-                    <Download className="w-5 h-5 mr-2" />
-                    Download Photo Strip
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
+              📸 Your Photos
+            </h3>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {/* Photo Strip Thumbnail */}
+              {session?.photobooth_image_url && (
+                <div
+                  onClick={() => setSelectedPhoto({ type: 'strip', url: session.photobooth_image_url })}
+                  className={`flex-shrink-0 cursor-pointer rounded-lg overflow-hidden border-3 transition-all ${
+                    selectedPhoto?.type === 'strip' 
+                      ? 'border-pink-400 ring-2 ring-pink-300' 
+                      : 'border-gray-300 hover:border-pink-300'
+                  }`}
+                  style={{ width: '50px', height: '100px' }}
+                >
+                  <img 
+                    src={`${API.replace('/api', '')}${session.photobooth_image_url}`}
+                    alt="Photo Strip"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              
+              {/* Individual Photos */}
+              {session?.photos?.map((photo, index) => (
+                <div
+                  key={index}
+                  onClick={() => setSelectedPhoto({ type: 'photo', url: photo, index })}
+                  className={`flex-shrink-0 cursor-pointer rounded-lg overflow-hidden border-3 transition-all ${
+                    selectedPhoto?.type === 'photo' && selectedPhoto?.index === index
+                      ? 'border-pink-400 ring-2 ring-pink-300' 
+                      : 'border-gray-300 hover:border-pink-300'
+                  }`}
+                  style={{ width: '80px', height: '45px' }}
+                >
+                  <img 
+                    src={`${API.replace('/api', '')}${photo}`}
+                    alt={`Photo ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </motion.div>
 
-            {/* GIF Download */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+          {/* Download Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-3"
+          >
+            {/* Download Photo Strip */}
+            <Button
+              onClick={handleDownloadImage}
+              className="w-full btn-sketch py-5 text-lg bg-pink-400 hover:bg-pink-500 text-white"
+              data-testid="public-download-image-btn"
             >
-              <Card className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Film className="w-7 h-7 text-purple-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-slate-800">Animated GIF</h3>
-                      <p className="text-sm text-slate-500">4 photos in a slideshow</p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleDownloadGif}
-                    className="w-full mt-4 border-purple-300 text-purple-700 hover:bg-purple-50"
-                    size="lg"
-                    data-testid="public-download-gif-btn"
-                  >
-                    <Download className="w-5 h-5 mr-2" />
-                    Download GIF
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
+              <Image className="w-5 h-5 mr-2" />
+              Download Photo Strip
+            </Button>
 
-          {/* Create Your Own */}
+            {/* Download Video */}
+            <Button
+              onClick={handleDownloadVideo}
+              className="w-full btn-sketch py-5 text-lg bg-white hover:bg-pink-50 text-gray-700 border-2 border-gray-800"
+              data-testid="public-download-gif-btn"
+            >
+              <Film className="w-5 h-5 mr-2" />
+              Download Video
+            </Button>
+
+            {/* Download Current Photo (if individual photo selected) */}
+            {selectedPhoto?.type === 'photo' && (
+              <Button
+                onClick={() => handleDownloadPhoto(selectedPhoto.index)}
+                variant="outline"
+                className="w-full btn-sketch py-4 text-base"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download This Photo
+              </Button>
+            )}
+          </motion.div>
+
+          {/* Footer */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="mt-12 text-center"
+            className="mt-8 text-center"
           >
-            <p className="text-slate-500 mb-4">Want to create your own photo strip?</p>
-            <Button
-              variant="outline"
-              onClick={() => window.location.href = '/'}
-              className="px-8"
-              data-testid="create-own-btn"
+            <p 
+              className="text-sm text-pink-400 font-bold"
+              style={{ fontFamily: 'var(--font-heading)' }}
             >
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Create Your Own
-            </Button>
+              ✨ Power of Ten ✨
+            </p>
           </motion.div>
-
-          {/* Footer */}
-          <div className="mt-12 text-center text-sm text-slate-400">
-            <p>Powered by Power of Ten</p>
-          </div>
         </div>
       </main>
     </div>
