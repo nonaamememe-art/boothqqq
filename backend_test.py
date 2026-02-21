@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 class PhotoboothAPITester:
-    def __init__(self, base_url="https://filter-frame-lab.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://power-of-ten.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
@@ -266,7 +266,7 @@ class PhotoboothAPITester:
 
 def main():
     print("🚀 Starting Power of Ten Photobooth API Testing...")
-    print(f"   Testing against: https://filter-frame-lab.preview.emergentagent.com/api")
+    print(f"   Testing against: https://power-of-ten.preview.emergentagent.com/api")
     
     tester = PhotoboothAPITester()
     

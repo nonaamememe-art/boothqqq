@@ -270,7 +270,7 @@ async def generate_qrcode(session_id: str):
     
     # Get share URL from environment - configurable for custom domain
     # Format: https://fotoshare.co/i/26454n5
-    share_base_url = os.environ.get('SHARE_BASE_URL', 'https://filter-frame-lab.preview.emergentagent.com/i')
+    share_base_url = os.environ.get('SHARE_BASE_URL', 'https://power-of-ten.preview.emergentagent.com/i')
     short_id = session.get('short_id', session_id[:7])
     download_url = f"{share_base_url}/{short_id}"
     
