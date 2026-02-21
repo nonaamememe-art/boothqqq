@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, Share2, ChevronLeft, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -14,8 +15,9 @@ export default function ShortUrlPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [photos, setPhotos] = useState([]);
-  const [finalImageUrl, setFinalImageUrl] = useState(null);
-  const [videoUrl, setVideoUrl] = useState(null);
+  const [allMedia, setAllMedia] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [eventTitle, setEventTitle] = useState("Power of Ten");
 
   useEffect(() => {
     fetchSession();
@@ -23,22 +25,46 @@ export default function ShortUrlPage() {
 
   const fetchSession = async () => {
     try {
-      // Resolve short ID to full session
       const resolveRes = await axios.get(`${API}/resolve/${shortId}`);
       const sessionId = resolveRes.data.session_id;
       
-      // Get full session details
       const sessionRes = await axios.get(`${API}/sessions/${sessionId}`);
       setSession({ ...sessionRes.data, fullId: sessionId });
-      setPhotos(sessionRes.data.photos || []);
       
-      // Set download URLs
+      const sessionPhotos = sessionRes.data.photos || [];
+      setPhotos(sessionPhotos);
+      
+      // Build media array: 4 photos + photo strip + video thumbnail
+      const mediaItems = [];
+      
+      // Add 4 individual photos
+      sessionPhotos.forEach((photo, idx) => {
+        mediaItems.push({
+          type: 'photo',
+          src: photo,
+          label: `Photo ${idx + 1}`
+        });
+      });
+      
+      // Add photo strip
       if (sessionRes.data.final_image_url) {
-        setFinalImageUrl(`${API.replace('/api', '')}${sessionRes.data.final_image_url}`);
+        mediaItems.push({
+          type: 'strip',
+          src: `${API.replace('/api', '')}${sessionRes.data.final_image_url}`,
+          label: 'Photo Strip'
+        });
       }
+      
+      // Add video
       if (sessionRes.data.video_url) {
-        setVideoUrl(`${API.replace('/api', '')}${sessionRes.data.video_url}`);
+        mediaItems.push({
+          type: 'video',
+          src: `${API.replace('/api', '')}${sessionRes.data.video_url}`,
+          label: 'Video'
+        });
       }
+      
+      setAllMedia(mediaItems);
     } catch (error) {
       console.error("Error fetching session:", error);
       setError("Photo not found or has expired");
@@ -47,24 +73,66 @@ export default function ShortUrlPage() {
     }
   };
 
-  const handleDownloadImage = () => {
-    if (session?.fullId) {
+  const handlePrev = () => {
+    setCurrentIndex(prev => (prev > 0 ? prev - 1 : allMedia.length - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex(prev => (prev < allMedia.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleThumbnailClick = (index) => {
+    setCurrentIndex(index);
+  };
+
+  const handleDownload = () => {
+    const currentMedia = allMedia[currentIndex];
+    if (!currentMedia || !session?.fullId) return;
+    
+    if (currentMedia.type === 'video') {
+      window.open(`${API.replace('/api', '')}/api/download/${session.fullId}/video`, '_blank');
+    } else if (currentMedia.type === 'strip') {
       window.open(`${API.replace('/api', '')}/api/download/${session.fullId}/image`, '_blank');
+    } else {
+      // For individual photos, create a download link
+      const link = document.createElement('a');
+      link.href = currentMedia.src;
+      link.download = `photo-${currentIndex + 1}.jpg`;
+      link.click();
     }
   };
 
-  const handleDownloadVideo = () => {
-    if (session?.fullId) {
-      window.open(`${API.replace('/api', '')}/api/download/${session.fullId}/video`, '_blank');
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: eventTitle,
+          text: 'Check out my photos!',
+          url: shareUrl
+        });
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          copyToClipboard(shareUrl);
+        }
+      }
+    } else {
+      copyToClipboard(shareUrl);
     }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Link copied!");
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center paper-bg">
+      <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="text-center">
-          <div className="w-20 h-20 border-4 border-pink-400 border-dashed rounded-full animate-spin mx-auto mb-6" />
-          <p className="text-2xl" style={{ fontFamily: 'var(--font-handwritten)' }}>Loading your photos...</p>
+          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-xl text-white">Loading...</p>
         </div>
       </div>
     );
@@ -72,156 +140,134 @@ export default function ShortUrlPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center paper-bg">
-        <div className="text-center max-w-md mx-auto px-6">
-          <div className="text-8xl mb-6">😢</div>
-          <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: 'var(--font-heading)' }}>Oops!</h2>
-          <p className="text-xl text-gray-600" style={{ fontFamily: 'var(--font-handwritten)' }}>{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="text-center">
+          <p className="text-2xl text-white mb-4">{error}</p>
         </div>
       </div>
     );
   }
 
+  const currentMedia = allMedia[currentIndex];
+
   return (
-    <div className="min-h-screen paper-bg py-8 px-4">
+    <div className="min-h-screen bg-black flex flex-col">
       {/* Header */}
-      <header className="text-center mb-8">
-        <motion.h1 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-5xl font-bold text-gray-800"
-          style={{ fontFamily: 'var(--font-heading)' }}
-        >
-          Power of Ten
-        </motion.h1>
-        <motion.div
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          className="h-1 bg-pink-400 mx-auto mt-2"
-          style={{ width: '150px', borderRadius: '255px 15px 225px 15px/15px 225px 15px 255px' }}
-        />
+      <header className="flex items-center justify-between px-6 py-4">
+        <h1 className="text-xl font-medium text-white">
+          {eventTitle}
+        </h1>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDownload}
+            className="text-white hover:bg-white/10"
+            data-testid="download-btn"
+          >
+            <Download className="w-6 h-6" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleShare}
+            className="text-white hover:bg-white/10"
+            data-testid="share-btn"
+          >
+            <Share2 className="w-6 h-6" />
+          </Button>
+        </div>
       </header>
 
-      <main className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 4 Individual Photos */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-1"
-          >
-            <h2 
-              className="text-2xl font-bold text-gray-800 mb-4 text-center"
-              style={{ fontFamily: 'var(--font-heading)' }}
-            >
-              📸 Your Photos
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              {photos.slice(0, 4).map((photo, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="aspect-square rounded-lg overflow-hidden sketch-border bg-white p-2"
-                  style={{ transform: `rotate(${index % 2 === 0 ? -1 : 1}deg)` }}
-                >
-                  <img
-                    src={photo}
-                    alt={`Photo ${index + 1}`}
-                    className="w-full h-full object-cover rounded"
-                  />
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+      {/* Main Preview Area */}
+      <main className="flex-1 flex items-center justify-center relative px-4">
+        {/* Previous Button */}
+        <button
+          onClick={handlePrev}
+          className="absolute left-4 z-10 p-2 text-white/70 hover:text-white transition-colors"
+          data-testid="prev-btn"
+        >
+          <ChevronLeft className="w-12 h-12" />
+        </button>
 
-          {/* Photo Booth (Final Image) */}
+        {/* Current Media Display */}
+        <AnimatePresence mode="wait">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-1"
+            key={currentIndex}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="relative max-w-4xl max-h-[70vh] flex items-center justify-center"
           >
-            <h2 
-              className="text-2xl font-bold text-gray-800 mb-4 text-center"
-              style={{ fontFamily: 'var(--font-heading)' }}
-            >
-              🎨 Photo Booth
-            </h2>
-            <div className="sketch-border bg-white p-3 mx-auto" style={{ maxWidth: '250px' }}>
-              {finalImageUrl ? (
-                <img
-                  src={finalImageUrl}
-                  alt="Photo Booth Strip"
-                  className="w-full rounded"
-                  data-testid="final-image"
-                />
-              ) : (
-                <div className="aspect-[1/3] bg-gray-100 rounded flex items-center justify-center">
-                  <span className="text-gray-400">Loading...</span>
-                </div>
-              )}
-            </div>
-            <div className="mt-4 text-center">
-              <Button
-                onClick={handleDownloadImage}
-                className="btn-sketch bg-pink-500 hover:bg-pink-600 text-white"
-                data-testid="download-image-btn"
-              >
-                <Download className="w-5 h-5 mr-2" />
-                Download Photo
-              </Button>
-            </div>
-          </motion.div>
+            {currentMedia?.type === 'video' ? (
+              <video
+                src={currentMedia.src}
+                autoPlay
+                loop
+                muted
+                playsInline
+                controls
+                className="max-w-full max-h-[70vh] rounded-lg"
+                data-testid="video-preview"
+              />
+            ) : (
+              <img
+                src={currentMedia?.src}
+                alt={currentMedia?.label}
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                data-testid="image-preview"
+              />
+            )}
 
-          {/* Video/GIF */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="lg:col-span-1"
-          >
-            <h2 
-              className="text-2xl font-bold text-gray-800 mb-4 text-center"
-              style={{ fontFamily: 'var(--font-heading)' }}
-            >
-              🎬 Video
-            </h2>
-            <div className="sketch-border bg-white p-3 mx-auto" style={{ maxWidth: '300px' }}>
-              {session?.fullId ? (
-                <video
-                  src={`${API.replace('/api', '')}/api/download/${session.fullId}/video`}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full rounded"
-                  style={{ aspectRatio: '16/9' }}
-                  data-testid="video-preview"
-                >
-                  Your browser does not support video.
-                </video>
-              ) : (
-                <div className="aspect-video bg-gray-100 rounded flex items-center justify-center">
-                  <span className="text-gray-400">Loading...</span>
-                </div>
-              )}
-            </div>
-            <div className="mt-4 text-center">
-              <Button
-                onClick={handleDownloadVideo}
-                variant="outline"
-                className="btn-sketch border-purple-400 text-purple-600 hover:bg-purple-50"
-                data-testid="download-video-btn"
-              >
-                <Download className="w-5 h-5 mr-2" />
-                Download Video
-              </Button>
+            {/* Photo Counter */}
+            <div className="absolute top-4 right-4 px-3 py-1 bg-black/60 rounded-full text-white text-sm">
+              {currentIndex + 1}/{allMedia.length}
             </div>
           </motion.div>
-        </div>
+        </AnimatePresence>
+
+        {/* Next Button */}
+        <button
+          onClick={handleNext}
+          className="absolute right-4 z-10 p-2 text-white/70 hover:text-white transition-colors"
+          data-testid="next-btn"
+        >
+          <ChevronRight className="w-12 h-12" />
+        </button>
       </main>
+
+      {/* Thumbnail Gallery */}
+      <div className="py-6 px-4">
+        <div className="flex items-center justify-center gap-3 overflow-x-auto">
+          {allMedia.map((media, index) => (
+            <motion.button
+              key={index}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleThumbnailClick(index)}
+              className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                index === currentIndex
+                  ? 'border-white shadow-lg shadow-white/20'
+                  : 'border-transparent opacity-60 hover:opacity-100'
+              }`}
+              data-testid={`thumbnail-${index}`}
+            >
+              {media.type === 'video' ? (
+                <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                  <span className="text-2xl">🎬</span>
+                </div>
+              ) : (
+                <img
+                  src={media.src}
+                  alt={media.label}
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </motion.button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
