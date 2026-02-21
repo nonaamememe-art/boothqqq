@@ -343,9 +343,11 @@ class TemplateCreate(BaseModel):
     id: str
     name: str
     description: str
-    background_color: str
-    frame_color: str
-    text_color: str
+    background_color: str = "#ffffff"
+    frame_color: str = "#f3f4f6"
+    text_color: str = "#6b7280"
+    template_image_url: Optional[str] = None  # Custom template image
+    photo_slots: Optional[List[dict]] = None  # [{x, y, width, height, rotation}]
 
 class StickerCreate(BaseModel):
     name: str
@@ -359,8 +361,8 @@ async def admin_login(request: AdminLoginRequest):
     raise HTTPException(status_code=401, detail="Invalid password")
 
 @api_router.get("/admin/templates")
-async def get_templates():
-    """Get all templates"""
+async def get_admin_templates():
+    """Get all templates for admin"""
     templates = await db.templates.find({}, {"_id": 0}).to_list(100)
     if not templates:
         # Return default templates
@@ -371,7 +373,14 @@ async def get_templates():
                 "description": "Clean white frames with elegant spacing",
                 "background_color": "#ffffff",
                 "frame_color": "#f3f4f6",
-                "text_color": "#6b7280"
+                "text_color": "#6b7280",
+                "template_image_url": None,
+                "photo_slots": [
+                    {"x": 20, "y": 20, "width": 280, "height": 157, "rotation": 0},
+                    {"x": 20, "y": 187, "width": 280, "height": 157, "rotation": 0},
+                    {"x": 20, "y": 354, "width": 280, "height": 157, "rotation": 0},
+                    {"x": 20, "y": 521, "width": 280, "height": 157, "rotation": 0}
+                ]
             },
             {
                 "id": "modern-dark",
@@ -379,7 +388,14 @@ async def get_templates():
                 "description": "Sleek dark theme with subtle shadows",
                 "background_color": "#1f2937",
                 "frame_color": "#374151",
-                "text_color": "#9ca3af"
+                "text_color": "#9ca3af",
+                "template_image_url": None,
+                "photo_slots": [
+                    {"x": 20, "y": 20, "width": 280, "height": 157, "rotation": 0},
+                    {"x": 20, "y": 187, "width": 280, "height": 157, "rotation": 0},
+                    {"x": 20, "y": 354, "width": 280, "height": 157, "rotation": 0},
+                    {"x": 20, "y": 521, "width": 280, "height": 157, "rotation": 0}
+                ]
             }
         ]
     return templates
@@ -394,6 +410,21 @@ async def create_template(template: TemplateCreate):
         upsert=True
     )
     return {"success": True, "template": template_dict}
+
+@api_router.post("/admin/templates/upload-image")
+async def upload_template_image(file: UploadFile = File(...)):
+    """Upload a template background image"""
+    # Generate unique filename
+    file_id = f"template_{uuid.uuid4().hex[:8]}"
+    file_ext = Path(file.filename).suffix or ".png"
+    file_path = FRAMES_DIR / f"{file_id}{file_ext}"
+    
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    url = f"/api/static/frames/{file_id}{file_ext}"
+    return {"success": True, "url": url}
 
 @api_router.delete("/admin/templates/{template_id}")
 async def delete_template(template_id: str):
