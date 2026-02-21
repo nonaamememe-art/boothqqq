@@ -260,10 +260,9 @@ async def generate_qrcode(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     
     # Get share URL from environment - configurable for custom domain
-    share_base_url = os.environ.get('SHARE_BASE_URL', 'https://fotoshare.co/i')
-    # Generate short ID from session_id (first 8 chars)
-    short_id = session_id[:8]
-    download_url = f"{share_base_url}/{short_id}"
+    # For dev: use full frontend URL, for prod: use short URL like fotoshare.co/i/xxxx
+    share_base_url = os.environ.get('SHARE_BASE_URL', 'https://filter-frame-lab.preview.emergentagent.com/download')
+    download_url = f"{share_base_url}/{session_id}"
     
     # Generate QR code
     qr = qrcode.QRCode(
