@@ -19,6 +19,7 @@ function App() {
           <Route path="/result/:sessionId" element={<ResultPage />} />
           <Route path="/download/:sessionId" element={<DownloadPage />} />
           <Route path="/i/:shortId" element={<ShortUrlPage />} />
+          <Route path="/d/:shortId" element={<DownloadPage />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-center" />
