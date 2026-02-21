@@ -194,11 +194,11 @@ export default function DownloadPage() {
             >
               📸 Your Photos
             </h3>
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 justify-center">
               {/* Photo Strip Thumbnail */}
-              {session?.photobooth_image_url && (
+              {(session?.photobooth_image_url || session?.final_image_url) && (
                 <div
-                  onClick={() => setSelectedPhoto({ type: 'strip', url: session.photobooth_image_url })}
+                  onClick={() => setSelectedPhoto({ type: 'strip', url: session.photobooth_image_url || session.final_image_url })}
                   className={`flex-shrink-0 cursor-pointer rounded-lg overflow-hidden border-3 transition-all ${
                     selectedPhoto?.type === 'strip' 
                       ? 'border-pink-400 ring-2 ring-pink-300' 
@@ -207,7 +207,7 @@ export default function DownloadPage() {
                   style={{ width: '50px', height: '100px' }}
                 >
                   <img 
-                    src={`${API.replace('/api', '')}${session.photobooth_image_url}`}
+                    src={`${API.replace('/api', '')}${session.photobooth_image_url || session.final_image_url}`}
                     alt="Photo Strip"
                     className="w-full h-full object-cover"
                   />
