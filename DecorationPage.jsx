@@ -16,6 +16,9 @@ export default function DecorationPage() {
   const containerRef = useRef(null);
 
   // States
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [qrValue, setQrValue] = useState('');
+  const [isPrinting, setIsPrinting] = useState(false);
   const [session, setSession] = useState(null);
   const [template, setTemplate] = useState(null);
   const [availableStickers, setAvailableStickers] = useState([]);
@@ -79,44 +82,39 @@ export default function DecorationPage() {
 
   const selectedStickerData = placedStickers.find(s => s.instanceId === selectedStickerId);
 
-  // บันทึกภาพและส่งไปพิมพ์
-  const handlePrint = async () => {
-    if (!containerRef.current) return;
-    setLoading(true);
+const handlePrint = async () => {
+    if (isPrinting) return;
+    setIsPrinting(true);
+    const tid = toast.loading("กำลังประมวลผลและส่งไฟล์ไปยังเครื่องปริ้น...");
+
     try {
-      // 1. ส่งข้อมูลตำแหน่งสติกเกอร์ไปเก็บ
-      await axios.post(`${API}/sessions/${sessionId}/stickers`, { 
-        session_id: sessionId, 
-        stickers: placedStickers 
+      // 1. แปลง Canvas เป็นรูปภาพ (เหมือนขั้นตอน finalize)
+      const stage = stageRef.current;
+      const dataURL = stage.toDataURL({ pixelRatio: 3 });
+
+      // 2. บันทึกรูปภาพลง Server ก่อน (เพื่อให้มีไฟล์ไปปริ้น)
+      await axios.post(`${API}/sessions/${sessionId}/finalize`, {
+        session_id: sessionId,
+        final_image_data: dataURL
       });
 
-      // 2. Capture ภาพจาก Container (ปิดขอบและเงาชั่วคราวเพื่อให้ภาพคลีน)
-      const canvas = await html2canvas(containerRef.current, {
-        backgroundColor: null,
-        scale: 3, // เพิ่มความละเอียดภาพ
-        useCORS: true,
-        logging: false,
-      });
-
-      const imageData = canvas.toDataURL("image/png");
-
-      // 3. ส่งภาพ Final ไปยัง Backend
-      await axios.post(`${API}/sessions/${sessionId}/finalize`, { 
-        session_id: sessionId, 
-        final_image_data: imageData 
-      });
-
-      toast.success("Ready to print!");
-      navigate(`/result/${sessionId}`);
+      // 3. สั่งปริ้นเบื้องหลัง และดึง Short URL สำหรับ QR Code
+      const res = await axios.post(`${API}/sessions/${sessionId}/print-and-qr`);
+      
+      if (res.data.success) {
+        setQrValue(res.data.short_url);
+        setShowQRCode(true); // เปิด Modal โชว์ QR Code
+        toast.success("ส่งคำสั่งปริ้นเรียบร้อยแล้ว!", { id: tid });
+      }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to finalize photo strip");
+      toast.error("เกิดข้อผิดพลาดในการปริ้น", { id: tid });
     } finally {
-      setLoading(false);
+      setIsPrinting(false);
     }
   };
 
-  if (!session || !template) return null;
+if (!session || !template) return null;
 
   return (
     <div className="h-screen w-screen bg-[#fdfaf5] flex items-center justify-between px-10 lg:px-20 overflow-hidden font-sans">
@@ -252,11 +250,11 @@ export default function DecorationPage() {
       {/* ฝั่งขวา: Action Buttons */}
       <div className="flex flex-col gap-6 z-20">
         <Button 
-          disabled={loading}
+          disabled={isPrinting}
           onClick={handlePrint}
           className="w-40 h-40 lg:w-44 lg:h-44 bg-[#ff4b91] hover:bg-[#ff1f75] text-white border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] rounded-[50px] flex flex-col gap-4 transition-all active:translate-x-1 active:translate-y-1 active:shadow-none"
         >
-          {loading ? (
+          {isPrinting ? (
             <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
           ) : (
             <>
@@ -275,3 +273,36 @@ export default function DecorationPage() {
     </div>
   );
 }
+
+<AnimatePresence>
+  {showQRCode && (
+    <motion.div 
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 backdrop-blur-md"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
+        className="bg-white p-8 rounded-[40px] max-w-sm w-full text-center shadow-[0_0_50px_rgba(255,71,133,0.3)]"
+      >
+        <div className="w-20 h-20 bg-[#FF4785] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-pink-200">
+          <Printer className="text-white w-10 h-10 animate-pulse" />
+        </div>
+        
+        <h2 className="text-2xl font-black text-[#FF4785] mb-2 uppercase italic">Printing Started!</h2>
+        <p className="text-gray-500 mb-8 font-medium">สแกนเพื่อรับรูปภาพของคุณที่นี่</p>
+        
+        <div className="bg-white p-4 rounded-3xl border-4 border-[#FF4785] inline-block shadow-inner mb-8">
+           {/* ถ้าใช้ qrcode.react */}
+           <QRCodeSVG value={qrValue} size={200} />
+        </div>
+
+        <button 
+          onClick={() => window.location.href = '/'} // หรือปิด Modal แล้วไปหน้าแรก
+          className="w-full py-4 bg-[#FF4785] text-white rounded-2xl font-bold text-lg shadow-lg hover:bg-[#e63e77] transition-all"
+        >
+          กลับหน้าหลัก
+        </button>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
