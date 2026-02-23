@@ -274,35 +274,3 @@ if (!session || !template) return null;
   );
 }
 
-<AnimatePresence>
-  {showQRCode && (
-    <motion.div 
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4 backdrop-blur-md"
-    >
-      <motion.div 
-        initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
-        className="bg-white p-8 rounded-[40px] max-w-sm w-full text-center shadow-[0_0_50px_rgba(255,71,133,0.3)]"
-      >
-        <div className="w-20 h-20 bg-[#FF4785] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-pink-200">
-          <Printer className="text-white w-10 h-10 animate-pulse" />
-        </div>
-        
-        <h2 className="text-2xl font-black text-[#FF4785] mb-2 uppercase italic">Printing Started!</h2>
-        <p className="text-gray-500 mb-8 font-medium">สแกนเพื่อรับรูปภาพของคุณที่นี่</p>
-        
-        <div className="bg-white p-4 rounded-3xl border-4 border-[#FF4785] inline-block shadow-inner mb-8">
-           {/* ถ้าใช้ qrcode.react */}
-           <QRCodeSVG value={qrValue} size={200} />
-        </div>
-
-        <button 
-          onClick={() => window.location.href = '/'} // หรือปิด Modal แล้วไปหน้าแรก
-          className="w-full py-4 bg-[#FF4785] text-white rounded-2xl font-bold text-lg shadow-lg hover:bg-[#e63e77] transition-all"
-        >
-          กลับหน้าหลัก
-        </button>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
