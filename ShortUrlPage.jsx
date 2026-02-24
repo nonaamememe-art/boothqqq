@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +21,8 @@ export default function ShortUrlPage() {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [mediaItems, setMediaItems] = useState([]);
+  
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -33,7 +35,7 @@ export default function ShortUrlPage() {
 
         const items = [];
         if (data.photos) {
-          data.photos.forEach((p, i) => items.push({ type: 'image', url: p, isFinal: false }));
+          data.photos.forEach((p) => items.push({ type: 'image', url: p, isFinal: false }));
         }
         items.push({ type: 'image', url: `${API}/download/${sessionId}/image`, isFinal: true });
         items.push({ type: 'video', url: `${API}/download/${sessionId}/video`, isFinal: false });
@@ -47,6 +49,20 @@ export default function ShortUrlPage() {
     };
     fetchSession();
   }, [shortId]);
+
+  // ระบบ Auto Scroll เลื่อน Thumbnail ตามรูปที่เลือก
+  useEffect(() => {
+    if (scrollRef.current) {
+      const activeElement = scrollRef.current.children[currentIndex];
+      if (activeElement) {
+        activeElement.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center"
+        });
+      }
+    }
+  }, [currentIndex]);
 
   const handleDownload = async () => {
     const item = mediaItems[currentIndex];
@@ -67,6 +83,9 @@ export default function ShortUrlPage() {
     }
   };
 
+  const nextImage = () => setCurrentIndex((prev) => (prev + 1) % mediaItems.length);
+  const prevImage = () => setCurrentIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
+
   if (loading) return (
     <div className="h-screen w-full flex items-center justify-center bg-[#FAF7F0]">
       <Loader2 className="w-10 h-10 animate-spin text-[#FF9494]" />
@@ -81,96 +100,85 @@ export default function ShortUrlPage() {
         .no-scrollbar::-webkit-scrollbar { display: none; }
       `}} />
 
-      {/* --- 1. Header (คงที่) --- */}
-      <header className="h-16 md:h-20 shrink-0 flex items-center justify-between px-6 bg-white/40 backdrop-blur-sm z-50">
+      {/* --- 1. Header --- */}
+      <header className="h-16 shrink-0 flex items-center justify-between px-6 bg-white/40 backdrop-blur-sm z-50">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 md:w-10 md:h-10 bg-[#FF9494] rounded-full flex items-center justify-center shadow-sm">
-            <Heart className="text-white w-4 h-4 md:w-6 md:h-6 fill-current" />
+          <div className="w-8 h-8 bg-[#FF9494] rounded-full flex items-center justify-center">
+            <Heart className="text-white w-4 h-4 fill-current" />
           </div>
-          <span className="text-xl md:text-2xl font-bold text-[#FF9494] uppercase tracking-tighter italic">
-            KKW Photobooth
-          </span>
+          <span className="text-xl font-bold text-[#FF9494] italic tracking-tighter">Poweroftenkkw</span>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={handleDownload} className="p-2 text-[#FF9494] hover:scale-110 transition-all">
-            <Download className="w-6 h-6 md:w-7 md:h-7" />
-          </button>
-          <button onClick={() => navigator.share?.({url: window.location.href})} className="p-2 text-[#FF9494] hover:scale-110 transition-all">
-            <Share2 className="w-6 h-6 md:w-7 md:h-7" />
-          </button>
+          <button onClick={handleDownload} className="p-2 text-[#FF9494] active:scale-90 transition-transform"><Download className="w-6 h-6" /></button>
+          <button onClick={() => navigator.share?.({url: window.location.href})} className="p-2 text-[#FF9494] active:scale-90 transition-transform"><Share2 className="w-6 h-6" /></button>
         </div>
       </header>
 
-      {/* --- 2. Main Gallery Area (ปรับรูปให้พอดีเมื่อ Footer สูงขึ้น) --- */}
+      {/* --- 2. Main Gallery Area (ปรับตำแหน่งภาพ Preview ลงมาอีกนิด) --- */}
       <main className="flex-grow min-h-0 relative flex items-center justify-center">
-        
-        {/* Navigation Arrows */}
-        <div className="absolute inset-x-2 md:inset-x-10 top-1/2 -translate-y-1/2 flex justify-between z-50 pointer-events-none">
-          <button 
-            onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
-            className={`w-12 h-12 md:w-16 md:h-16 flex items-center justify-center rounded-full bg-white/90 text-[#FF9494] shadow-xl border border-[#FFE3E1] pointer-events-auto transition-all hover:scale-110 ${currentIndex === 0 ? 'opacity-0' : 'opacity-100'}`}
-          >
-            <ChevronLeft className="w-8 h-8 md:w-10 md:h-10" />
+        {/* Navigation Arrows (ลูกศรชมพูเปล่าๆ) */}
+        <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 flex justify-between z-50 pointer-events-none">
+          <button onClick={prevImage} className="p-4 flex items-center justify-center text-[#FF9494]/70 hover:text-[#FF9494] pointer-events-auto active:scale-90 transition-all">
+            <ChevronLeft className="w-12 h-12 md:w-16 md:h-16" />
           </button>
-          <button 
-            onClick={() => setCurrentIndex(prev => Math.min(mediaItems.length - 1, prev + 1))}
-            className={`w-12 h-12 md:w-16 md:h-16 flex items-center justify-center rounded-full bg-white/90 text-[#FF9494] shadow-xl border border-[#FFE3E1] pointer-events-auto transition-all hover:scale-110 ${currentIndex === mediaItems.length - 1 ? 'opacity-0' : 'opacity-100'}`}
-          >
-            <ChevronRight className="w-8 h-8 md:w-10 md:h-10" />
+          <button onClick={nextImage} className="p-4 flex items-center justify-center text-[#FF9494]/70 hover:text-[#FF9494] pointer-events-auto active:scale-90 transition-all">
+            <ChevronRight className="w-12 h-12 md:w-16 md:h-16" />
           </button>
         </div>
 
-        {/* รูปหลัก: จำกัดความสูง max-h-[45vh] บนมือถือ เพื่อกันไม่ให้ทับกับ Thumbnail ที่ยกสูงขึ้น */}
-        <div className="w-full h-full flex items-center justify-center relative p-4 md:p-6">
+        {/* ปรับระยะ pt-16 (ขยับลงมา) และ pb-16 (ให้พื้นที่ล่าง) */}
+        <div className="w-full h-full flex items-center justify-center p-6 pt-16 pb-16">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentIndex}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="relative max-w-full h-full flex items-center justify-center"
+              className="h-full w-full flex items-center justify-center relative"
             >
-              <div className="absolute top-2 right-2 md:top-4 md:right-4 z-[60] bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-bold">
+              {/* ลำดับภาพ (Badge) */}
+              <div className="absolute -top-10 -right-4 bg-black/50 text-white px-3 py-1 rounded-full text-[10px] md:text-xs font-bold z-50">
                 {currentIndex + 1} / {mediaItems.length}
               </div>
 
               {mediaItems[currentIndex].type === 'image' ? (
                 <img 
                   src={mediaItems[currentIndex].url} 
-                  className="max-w-full max-h-[45vh] md:max-h-full object-contain rounded-2xl shadow-2xl border-[6px] md:border-[12px] border-white ring-1 ring-[#EADBC8]/20"
+                  // ปรับ max-h และลดระยะการ translate-y ลง เพื่อให้ภาพขยับลงมาตามที่ต้องการ
+                  className={`max-w-full shadow-2xl object-contain transition-transform duration-300 ${mediaItems[currentIndex].isFinal ? 'max-h-[55vh] -translate-y-[5px]' : 'max-h-[45vh]'}`}
                   alt="Gallery"
                 />
               ) : (
-                <video 
-                  src={mediaItems[currentIndex].url} 
-                  controls autoPlay loop playsInline
-                  className="max-w-full max-h-[45vh] md:max-h-full object-contain rounded-2xl shadow-2xl border-[6px] md:border-[12px] border-white"
-                />
+                <video src={mediaItems[currentIndex].url} controls autoPlay loop playsInline className="max-h-[45vh] max-w-full shadow-2xl" />
               )}
             </motion.div>
           </AnimatePresence>
         </div>
       </main>
 
-      {/* --- 3. Footer: ยก Thumbnail ขึ้นสูง (เยอะเลย) ในโทรศัพท์ --- */}
-      <footer className="h-48 md:h-44 shrink-0 bg-white/20 backdrop-blur-md flex items-center justify-center border-t border-[#EADBC8]/10 pb-16 md:pb-8">
-        <div className="flex gap-4 md:gap-6 px-8 overflow-x-auto no-scrollbar items-center max-w-full">
+      {/* --- 3. Footer (Thumbnails w-24 h-24 + Auto Scroll + Glow) --- */}
+      <footer className="h-64 shrink-0 bg-white/30 backdrop-blur-md flex items-center border-t border-gray-100/50">
+        <div 
+          ref={scrollRef}
+          className="flex gap-4 px-10 pt-4 pb-12 overflow-x-auto no-scrollbar items-center w-full md:justify-center"
+        >
           {mediaItems.map((item, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentIndex(idx)}
-              className={`relative flex-shrink-0 w-20 h-20 md:w-28 md:h-28 rounded-2xl overflow-hidden border-[3px] transition-all duration-300 shadow-md ${
-                currentIndex === idx 
-                  ? 'border-[#FF9494] scale-110 shadow-pink-200/50 ring-4 ring-[#FF9494]/20' 
-                  : 'border-white opacity-40 hover:opacity-100 grayscale-[0.3]'
-              }`}
+              className={`relative flex-shrink-0 w-24 h-24 transition-all duration-300 rounded-xl overflow-hidden
+                ${currentIndex === idx 
+                  ? 'border-[5px] border-[#FF91A4] scale-110 z-10 shadow-[0_0_20px_rgba(255,145,164,0.7)]' 
+                  : 'border-[2px] border-white opacity-40 grayscale-[0.2]'
+                }
+              `}
             >
               {item.type === 'image' ? (
-                <img src={item.url} className="w-full h-full object-cover" alt="thumb" />
+                <img src={item.url} className="w-full h-full object-cover" alt={`thumb-${idx}`} />
               ) : (
-                <div className="w-full h-full bg-[#4A403A] flex items-center justify-center">
-                  <PlayCircle className="text-white w-10 h-10" />
+                <div className="w-full h-full bg-[#333] flex items-center justify-center">
+                  <PlayCircle className="text-white w-10 h-10 opacity-70" />
                 </div>
               )}
             </button>
